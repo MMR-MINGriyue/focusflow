@@ -1,0 +1,55 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+  
+  body {
+    @apply bg-gray-50 text-gray-900;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200 font-medium;
+  }
+  
+  .btn-secondary {
+    @apply px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors duration-200 font-medium;
+  }
+  
+  .btn-success {
+    @apply px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors duration-200 font-medium;
+  }
+  
+  .card {
+    @apply bg-white rounded-lg shadow-lg p-6;
+  }
+  
+  .timer-display {
+    @apply text-6xl font-bold font-mono tracking-wider;
+  }
+  
+  .status-indicator {
+    @apply inline-block w-3 h-3 rounded-full mr-2;
+  }
+  
+  .status-focus {
+    @apply bg-green-500 animate-pulse;
+  }
+  
+  .status-break {
+    @apply bg-red-500 animate-pulse;
+  }
+  
+  .status-micro {
+    @apply bg-yellow-500 animate-pulse;
+  }
+  
+  .status-paused {
+    @apply bg-gray-400;
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build",
+    "devPath": "http://localhost:1420",
+    "distDir": "../dist"
+  },
+  "package": {
+    "productName": "FocusFlow",
+    "version": "0.1.0"
+  },
+  "tauri": {
+    "allowlist": {
+      "all": false,
+      "shell": {
+        "all": false,
+        "open": true
+      },
+      "notification": {
+        "all": true
+      },
+      "window": {
+        "all": true
+      },
+      "fs": {
+        "all": false,
+        "readFile": true,
+        "writeFile": true,
+        "readDir": true,
+        "createDir": true,
+        "removeDir": true,
+        "removeFile": true,
+        "exists": true,
+        "scope": ["$APPDATA/*"]
+      }
+    },
+    "plugins": {
+      "sql": {
+        "preload": ["sqlite:focusflow.db"]
+      }
+    },
+    "bundle": {
+      "active": false,
+      "identifier": "com.focusflow.dev"
+    },
+    "security": {
+      "csp": null
+    },
+    "updater": {
+      "active": false
+    },
+    "windows": [
+      {
+        "fullscreen": false,
+        "height": 600,
+        "resizable": true,
+        "title": "FocusFlow",
+        "width": 800
+      }
+    ]
+  }
+} 
