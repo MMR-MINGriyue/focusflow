@@ -19,7 +19,7 @@ export const achievementDefinitions: AchievementDefinition[] = [
     rarity: 'common',
     points: 10,
     triggers: ['focus_session_completed'],
-    checkCondition: (data, userStats) => userStats.totalFocusSessions >= 1,
+    checkCondition: (_data, userStats) => userStats.totalFocusSessions >= 1,
   },
   {
     id: 'first_rating',
@@ -32,7 +32,7 @@ export const achievementDefinitions: AchievementDefinition[] = [
     rarity: 'common',
     points: 10,
     triggers: ['efficiency_rating_submitted'],
-    checkCondition: (data, userStats) => userStats.totalRatings >= 1,
+    checkCondition: (_data, userStats) => userStats.totalRatings >= 1,
   },
 
   // ⏰ 专注时长成就
@@ -47,7 +47,7 @@ export const achievementDefinitions: AchievementDefinition[] = [
     rarity: 'common',
     points: 25,
     triggers: ['focus_session_completed'],
-    checkCondition: (data, userStats) => userStats.totalFocusTime >= 10 * 60,
+    checkCondition: (_data, userStats) => userStats.totalFocusTime >= 10 * 60,
   },
   {
     id: 'focus_50_hours',
@@ -60,7 +60,7 @@ export const achievementDefinitions: AchievementDefinition[] = [
     rarity: 'rare',
     points: 100,
     triggers: ['focus_session_completed'],
-    checkCondition: (data, userStats) => userStats.totalFocusTime >= 50 * 60,
+    checkCondition: (_data, userStats) => userStats.totalFocusTime >= 50 * 60,
   },
   {
     id: 'focus_100_hours',
@@ -73,7 +73,7 @@ export const achievementDefinitions: AchievementDefinition[] = [
     rarity: 'epic',
     points: 250,
     triggers: ['focus_session_completed'],
-    checkCondition: (data, userStats) => userStats.totalFocusTime >= 100 * 60,
+    checkCondition: (_data, userStats) => userStats.totalFocusTime >= 100 * 60,
   },
   {
     id: 'focus_500_hours',
@@ -86,7 +86,7 @@ export const achievementDefinitions: AchievementDefinition[] = [
     rarity: 'legendary',
     points: 1000,
     triggers: ['focus_session_completed'],
-    checkCondition: (data, userStats) => userStats.totalFocusTime >= 500 * 60,
+    checkCondition: (_data, userStats) => userStats.totalFocusTime >= 500 * 60,
   },
 
   // 🔥 连续性成就
@@ -101,7 +101,7 @@ export const achievementDefinitions: AchievementDefinition[] = [
     rarity: 'common',
     points: 30,
     triggers: ['focus_session_completed'],
-    checkCondition: (data, userStats) => userStats.currentStreak >= 3,
+    checkCondition: (_data, userStats) => userStats.currentStreak >= 3,
   },
   {
     id: 'streak_7_days',
@@ -114,7 +114,7 @@ export const achievementDefinitions: AchievementDefinition[] = [
     rarity: 'rare',
     points: 75,
     triggers: ['focus_session_completed'],
-    checkCondition: (data, userStats) => userStats.currentStreak >= 7,
+    checkCondition: (_data, userStats) => userStats.currentStreak >= 7,
   },
   {
     id: 'streak_30_days',
@@ -127,7 +127,7 @@ export const achievementDefinitions: AchievementDefinition[] = [
     rarity: 'epic',
     points: 300,
     triggers: ['focus_session_completed'],
-    checkCondition: (data, userStats) => userStats.currentStreak >= 30,
+    checkCondition: (_data, userStats) => userStats.currentStreak >= 30,
   },
 
   // ⭐ 效率成就
@@ -142,7 +142,7 @@ export const achievementDefinitions: AchievementDefinition[] = [
     rarity: 'rare',
     points: 50,
     triggers: ['efficiency_rating_submitted'],
-    checkCondition: (data, userStats) => data.rating?.overallRating >= 5,
+    checkCondition: (data, _userStats) => data.rating?.overallRating >= 5,
   },
   {
     id: 'consistent_efficiency',
@@ -155,7 +155,7 @@ export const achievementDefinitions: AchievementDefinition[] = [
     rarity: 'epic',
     points: 200,
     triggers: ['efficiency_rating_submitted'],
-    checkCondition: (data, userStats) => userStats.averageEfficiency >= 4.5,
+    checkCondition: (_data, userStats) => userStats.averageEfficiency >= 4.5,
   },
 
   // 🎉 特殊成就
@@ -170,7 +170,7 @@ export const achievementDefinitions: AchievementDefinition[] = [
     rarity: 'epic',
     points: 150,
     triggers: ['focus_session_completed'],
-    checkCondition: (data, userStats) => data.sessionDuration >= 180,
+    checkCondition: (data, _userStats) => data.sessionDuration >= 180,
   },
   {
     id: 'early_bird',
@@ -183,7 +183,7 @@ export const achievementDefinitions: AchievementDefinition[] = [
     rarity: 'rare',
     points: 40,
     triggers: ['focus_session_completed'],
-    checkCondition: (data, userStats) => {
+    checkCondition: (data, _userStats) => {
       const hour = new Date(data.startTime).getHours();
       return hour >= 5 && hour < 6;
     },
@@ -199,7 +199,7 @@ export const achievementDefinitions: AchievementDefinition[] = [
     rarity: 'rare',
     points: 40,
     triggers: ['focus_session_completed'],
-    checkCondition: (data, userStats) => {
+    checkCondition: (data, _userStats) => {
       const hour = new Date(data.startTime).getHours();
       return hour >= 23 || hour < 5;
     },
@@ -216,7 +216,7 @@ export const achievementDefinitions: AchievementDefinition[] = [
     points: 500,
     hidden: true,
     triggers: ['efficiency_rating_submitted'],
-    checkCondition: (data, userStats) => userStats.perfectRatingStreak >= 10,
+    checkCondition: (_data, userStats) => userStats.perfectRatingStreak >= 10,
   },
 
   // 📊 里程碑成就
@@ -231,7 +231,7 @@ export const achievementDefinitions: AchievementDefinition[] = [
     rarity: 'epic',
     points: 200,
     triggers: ['focus_session_completed'],
-    checkCondition: (data, userStats) => userStats.totalFocusSessions >= 100,
+    checkCondition: (_data, userStats) => userStats.totalFocusSessions >= 100,
   },
   {
     id: 'micro_break_master',
@@ -244,7 +244,7 @@ export const achievementDefinitions: AchievementDefinition[] = [
     rarity: 'rare',
     points: 150,
     triggers: ['micro_break_completed'],
-    checkCondition: (data, userStats) => userStats.totalMicroBreaks >= 500,
+    checkCondition: (_data, userStats) => userStats.totalMicroBreaks >= 500,
   },
 ];
 

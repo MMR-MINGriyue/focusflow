@@ -2,10 +2,13 @@ import React, { useState } from 'react';
 import { TimerSettings } from '../../stores/timerStore';
 import { Switch } from '../ui/Switch';
 import { Slider } from '../ui/Slider';
-import { Volume2, Bell, Clock, Play, Pause, Settings as SettingsIcon, Palette } from 'lucide-react';
+import { Volume2, Bell, Clock, Play, Pause, Settings as SettingsIcon } from 'lucide-react';
 import { soundService } from '../../services/sound';
 import SoundManager from './SoundManager';
-import ThemeSelector from './ThemeSelector';
+import SoundMappingConfig from './SoundMappingConfig';
+import SoundVolumeControl from './SoundVolumeControl';
+import SoundPersistenceTest from './SoundPersistenceTest';
+// import ThemeSelector from './ThemeSelector'; // TODO: 集成主题选择器
 
 interface SettingsProps extends TimerSettings {
   onSettingsChange: (settings: TimerSettings) => void;
@@ -23,6 +26,7 @@ const Settings: React.FC<SettingsProps> = ({
   onSettingsChange,
 }) => {
   const [playingSound, setPlayingSound] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'basic' | 'sound' | 'mapping' | 'volume' | 'test'>('basic');
   const [showSoundManager, setShowSoundManager] = useState(false);
 
   // 音效类型定义
@@ -90,14 +94,53 @@ const Settings: React.FC<SettingsProps> = ({
     });
   };
 
+  // 处理音效设置变化
+  const handleSoundSettingsChange = () => {
+    // 音效设置变化时的回调
+    console.log('Sound settings changed');
+  };
+
+  // 标签页配置
+  const tabs = [
+    { id: 'basic', name: '基础设置', icon: <Clock className="h-4 w-4" /> },
+    { id: 'sound', name: '音效管理', icon: <Volume2 className="h-4 w-4" /> },
+    { id: 'mapping', name: '音效映射', icon: <SettingsIcon className="h-4 w-4" /> },
+    { id: 'volume', name: '音量控制', icon: <Bell className="h-4 w-4" /> },
+    { id: 'test', name: '持久化测试', icon: <Play className="h-4 w-4" /> },
+  ] as const;
+
   return (
     <div className="space-y-6">
-      {/* 时间设置 */}
-      <div className="space-y-4">
-        <div className="flex items-center space-x-2">
-          <Clock className="h-5 w-5 text-blue-500" />
-          <h3 className="text-lg font-semibold">时间设置</h3>
-        </div>
+      {/* 标签页导航 */}
+      <div className="border-b border-gray-200">
+        <nav className="flex space-x-8">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center space-x-2 py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                activeTab === tab.id
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              {tab.icon}
+              <span>{tab.name}</span>
+            </button>
+          ))}
+        </nav>
+      </div>
+
+      {/* 标签页内容 */}
+      {activeTab === 'basic' && (
+        <div className="space-y-6">
+          {/* 时间设置 */}
+          <div className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <Clock className="h-5 w-5 text-blue-500" />
+              <h3 className="text-lg font-semibold">时间设置</h3>
+            </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
@@ -363,6 +406,28 @@ const Settings: React.FC<SettingsProps> = ({
           </button>
         </div>
       </div>
+        </div>
+      )}
+
+      {/* 音效管理标签页 */}
+      {activeTab === 'sound' && (
+        <SoundManager onSoundChange={handleSoundSettingsChange} />
+      )}
+
+      {/* 音效映射标签页 */}
+      {activeTab === 'mapping' && (
+        <SoundMappingConfig onMappingChange={handleSoundSettingsChange} />
+      )}
+
+      {/* 音量控制标签页 */}
+      {activeTab === 'volume' && (
+        <SoundVolumeControl onVolumeChange={(volume) => handleSliderChange('volume', volume)} />
+      )}
+
+      {/* 持久化测试标签页 */}
+      {activeTab === 'test' && (
+        <SoundPersistenceTest />
+      )}
     </div>
   );
 };

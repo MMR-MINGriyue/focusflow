@@ -124,7 +124,7 @@ class AchievementService {
   /**
    * 更新成就进度
    */
-  private updateProgress(achievement: Achievement, eventData: any, userStats: any): void {
+  private updateProgress(achievement: Achievement, _eventData: any, userStats: any): void {
     const definition = achievementDefinitions.find(def => def.id === achievement.id);
     if (!definition) return;
 
