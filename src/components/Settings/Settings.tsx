@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { TimerSettings } from '../../stores/timerStore';
 import { Switch } from '../ui/Switch';
 import { Slider } from '../ui/Slider';
-import { Volume2, Bell, Clock, Play, Pause, Settings as SettingsIcon, Palette } from 'lucide-react';
+import { Volume2, Bell, Clock, Play, Pause, Settings as SettingsIcon, Palette, Monitor, Zap, Sparkles } from 'lucide-react';
 import { soundService } from '../../services/sound';
 import SoundManager from './SoundManager';
 import SoundMappingConfig from './SoundMappingConfig';
@@ -11,6 +11,12 @@ import SoundPersistenceTest from './SoundPersistenceTest';
 import ThemeEditor from './ThemeEditor';
 import ThemeSelector from './ThemeSelector';
 import ThemeManager from './ThemeManager';
+import TimerStyleSelector from './TimerStyleSelector';
+import TimerStyleEditor from './TimerStyleEditor';
+import TimerStyleManager from './TimerStyleManager';
+import TimerAnimationSettings from './TimerAnimationSettings';
+import BackgroundDecorationSettings from './BackgroundDecorationSettings';
+import ResponsiveSettings from './ResponsiveSettings';
 
 interface SettingsProps extends TimerSettings {
   onSettingsChange: (settings: TimerSettings) => void;
@@ -28,7 +34,7 @@ const Settings: React.FC<SettingsProps> = ({
   onSettingsChange,
 }) => {
   const [playingSound, setPlayingSound] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'basic' | 'sound' | 'mapping' | 'volume' | 'test' | 'theme' | 'themeEditor' | 'themeManager'>('basic');
+  const [activeTab, setActiveTab] = useState<'basic' | 'sound' | 'mapping' | 'volume' | 'test' | 'theme' | 'themeEditor' | 'themeManager' | 'timerStyle' | 'timerStyleEditor' | 'timerStyleManager' | 'timerAnimation' | 'backgroundDecoration' | 'responsive'>('basic');
   const [showSoundManager, setShowSoundManager] = useState(false);
 
   // 音效类型定义
@@ -111,6 +117,12 @@ const Settings: React.FC<SettingsProps> = ({
     { id: 'theme', name: '主题选择', icon: <Palette className="h-4 w-4" /> },
     { id: 'themeEditor', name: '主题编辑', icon: <Palette className="h-4 w-4" /> },
     { id: 'themeManager', name: '主题管理', icon: <Palette className="h-4 w-4" /> },
+    { id: 'timerStyle', name: '计时器样式', icon: <Monitor className="h-4 w-4" /> },
+    { id: 'timerStyleEditor', name: '样式编辑', icon: <Monitor className="h-4 w-4" /> },
+    { id: 'timerStyleManager', name: '样式管理', icon: <Monitor className="h-4 w-4" /> },
+    { id: 'timerAnimation', name: '动画效果', icon: <Zap className="h-4 w-4" /> },
+    { id: 'backgroundDecoration', name: '背景装饰', icon: <Sparkles className="h-4 w-4" /> },
+    { id: 'responsive', name: '响应式适配', icon: <Monitor className="h-4 w-4" /> },
     { id: 'test', name: '持久化测试', icon: <Play className="h-4 w-4" /> },
   ] as const;
 
@@ -442,6 +454,36 @@ const Settings: React.FC<SettingsProps> = ({
       {/* 主题管理标签页 */}
       {activeTab === 'themeManager' && (
         <ThemeManager onThemeChange={handleSoundSettingsChange} />
+      )}
+
+      {/* 计时器样式标签页 */}
+      {activeTab === 'timerStyle' && (
+        <TimerStyleSelector onStyleChange={handleSoundSettingsChange} />
+      )}
+
+      {/* 计时器样式编辑标签页 */}
+      {activeTab === 'timerStyleEditor' && (
+        <TimerStyleEditor onStyleChange={handleSoundSettingsChange} />
+      )}
+
+      {/* 计时器样式管理标签页 */}
+      {activeTab === 'timerStyleManager' && (
+        <TimerStyleManager onStyleChange={handleSoundSettingsChange} />
+      )}
+
+      {/* 计时器动画效果标签页 */}
+      {activeTab === 'timerAnimation' && (
+        <TimerAnimationSettings onSettingsChange={handleSoundSettingsChange} />
+      )}
+
+      {/* 背景装饰标签页 */}
+      {activeTab === 'backgroundDecoration' && (
+        <BackgroundDecorationSettings onSettingsChange={handleSoundSettingsChange} />
+      )}
+
+      {/* 响应式适配标签页 */}
+      {activeTab === 'responsive' && (
+        <ResponsiveSettings onSettingsChange={handleSoundSettingsChange} />
       )}
 
       {/* 持久化测试标签页 */}

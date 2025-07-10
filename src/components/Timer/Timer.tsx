@@ -8,6 +8,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/
 import { Play, Pause, RotateCcw, Settings as SettingsIcon } from 'lucide-react';
 import Settings from '../Settings/Settings';
 import EfficiencyRating from './EfficiencyRating';
+import TimerDisplay from './TimerDisplay';
 import { wrapFunction } from '../../utils/errorHandler';
 
 
@@ -36,8 +37,8 @@ const Timer: React.FC<TimerProps> = ({ onStateChange }) => {
     isActive,
     formattedTime,
     stateText,
-    stateColor,
-    progress
+    progress,
+    timeLeft
   } = useTimer();
 
   // 状态变化回调
@@ -68,34 +69,28 @@ const Timer: React.FC<TimerProps> = ({ onStateChange }) => {
     <TooltipProvider>
       <div className="space-y-6">
         <div className="flex flex-col items-center justify-center space-y-6">
-        <div className={`text-6xl font-bold timer-display ${stateColor}`}>
-          {formattedTime}
-        </div>
-        <div className="flex items-center space-x-2">
-          <div className={`status-indicator ${
-            currentState === 'focus' ? 'status-focus' :
-            currentState === 'break' ? 'status-break' :
-            currentState === 'microBreak' ? 'status-micro' : 'status-paused'
-          }`}></div>
-          <div className={`text-xl font-medium ${stateColor}`}>
-            {stateText}
-          </div>
-        </div>
-
-        {/* 进度条 */}
-        <div className="w-full max-w-md">
-          <Progress
-            value={progress}
-            className="h-3"
-            indicatorClassName={
-              currentState === 'focus' ? 'bg-green-500' :
-              currentState === 'break' ? 'bg-red-500' : 'bg-yellow-500'
-            }
+          {/* 新的计时器显示组件 */}
+          <TimerDisplay
+            time={timeLeft}
+            formattedTime={formattedTime}
+            currentState={currentState}
+            progress={progress}
+            isActive={isActive}
+            stateText={stateText}
+            className="timer-main-display"
           />
-          <div className="text-xs text-gray-500 mt-1 text-center">
-            {Math.round(progress)}% 完成
+
+          {/* 备用进度条（某些样式可能不显示进度） */}
+          <div className="w-full max-w-md">
+            <Progress
+              value={progress}
+              className="h-2 opacity-50"
+              indicatorClassName={
+                currentState === 'focus' ? 'bg-green-500' :
+                currentState === 'break' ? 'bg-red-500' : 'bg-yellow-500'
+              }
+            />
           </div>
-        </div>
         <div className="flex items-center space-x-3" data-tour="timer-controls">
           <Tooltip>
             <TooltipTrigger asChild>

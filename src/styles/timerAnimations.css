@@ -1,0 +1,350 @@
+/* 计时器动画效果样式 */
+
+/* 基础动画变量 */
+:root {
+  --timer-animation-duration: 300ms;
+  --timer-animation-easing: ease-in-out;
+  --timer-pulse-duration: 2s;
+  --timer-breathing-duration: 3s;
+  --timer-rotation-duration: 60s;
+  --timer-glow-intensity: 10px;
+}
+
+/* 脉冲动画 */
+@keyframes timer-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.8;
+  }
+}
+
+.timer-pulse {
+  animation: timer-pulse var(--timer-pulse-duration) ease-in-out infinite;
+}
+
+/* 呼吸效果 */
+@keyframes timer-breathing {
+  0%, 100% {
+    opacity: 1;
+    filter: brightness(1);
+  }
+  50% {
+    opacity: 0.7;
+    filter: brightness(1.2);
+  }
+}
+
+.timer-breathing {
+  animation: timer-breathing var(--timer-breathing-duration) ease-in-out infinite;
+}
+
+/* 旋转动画 */
+@keyframes timer-rotation {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.timer-rotation {
+  animation: timer-rotation var(--timer-rotation-duration) linear infinite;
+}
+
+/* 发光效果 */
+@keyframes timer-glow {
+  0%, 100% {
+    box-shadow: 0 0 5px currentColor;
+  }
+  50% {
+    box-shadow: 0 0 var(--timer-glow-intensity) currentColor,
+                0 0 calc(var(--timer-glow-intensity) * 2) currentColor;
+  }
+}
+
+.timer-glow {
+  animation: timer-glow var(--timer-pulse-duration) ease-in-out infinite;
+}
+
+/* 霓虹灯效果 */
+@keyframes timer-neon {
+  0%, 100% {
+    text-shadow: 
+      0 0 5px currentColor,
+      0 0 10px currentColor,
+      0 0 15px currentColor;
+  }
+  50% {
+    text-shadow: 
+      0 0 2px currentColor,
+      0 0 5px currentColor,
+      0 0 8px currentColor,
+      0 0 12px currentColor,
+      0 0 18px currentColor;
+  }
+}
+
+.timer-neon {
+  animation: timer-neon var(--timer-breathing-duration) ease-in-out infinite;
+}
+
+/* 弹跳效果 */
+@keyframes timer-bounce {
+  0%, 20%, 53%, 80%, 100% {
+    transform: translate3d(0, 0, 0);
+  }
+  40%, 43% {
+    transform: translate3d(0, -8px, 0);
+  }
+  70% {
+    transform: translate3d(0, -4px, 0);
+  }
+  90% {
+    transform: translate3d(0, -2px, 0);
+  }
+}
+
+.timer-bounce {
+  animation: timer-bounce 2s ease-in-out infinite;
+}
+
+/* 摇摆效果 */
+@keyframes timer-swing {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  20% {
+    transform: rotate(3deg);
+  }
+  40% {
+    transform: rotate(-3deg);
+  }
+  60% {
+    transform: rotate(2deg);
+  }
+  80% {
+    transform: rotate(-2deg);
+  }
+}
+
+.timer-swing {
+  animation: timer-swing 4s ease-in-out infinite;
+  transform-origin: center top;
+}
+
+/* 淡入淡出效果 */
+@keyframes timer-fade {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+.timer-fade {
+  animation: timer-fade var(--timer-breathing-duration) ease-in-out infinite;
+}
+
+/* 缩放效果 */
+@keyframes timer-scale {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+.timer-scale {
+  animation: timer-scale var(--timer-pulse-duration) ease-in-out infinite;
+}
+
+/* 彩虹色彩效果 */
+@keyframes timer-rainbow {
+  0% { color: #ff0000; }
+  16.66% { color: #ff8000; }
+  33.33% { color: #ffff00; }
+  50% { color: #00ff00; }
+  66.66% { color: #0080ff; }
+  83.33% { color: #8000ff; }
+  100% { color: #ff0000; }
+}
+
+.timer-rainbow {
+  animation: timer-rainbow 6s linear infinite;
+}
+
+/* 进度条动画 */
+@keyframes timer-progress-glow {
+  0%, 100% {
+    box-shadow: 0 0 5px currentColor;
+  }
+  50% {
+    box-shadow: 0 0 15px currentColor, 0 0 25px currentColor;
+  }
+}
+
+.timer-progress-glow {
+  animation: timer-progress-glow var(--timer-pulse-duration) ease-in-out infinite;
+}
+
+/* 数字翻转效果 */
+@keyframes timer-flip {
+  0% {
+    transform: rotateY(0deg);
+  }
+  50% {
+    transform: rotateY(90deg);
+  }
+  100% {
+    transform: rotateY(0deg);
+  }
+}
+
+.timer-flip {
+  animation: timer-flip 0.6s ease-in-out;
+}
+
+/* 状态变化动画 */
+@keyframes timer-state-change {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.timer-state-change {
+  animation: timer-state-change 0.8s ease-out;
+}
+
+/* 心跳效果 */
+@keyframes timer-heartbeat {
+  0%, 100% {
+    transform: scale(1);
+  }
+  14% {
+    transform: scale(1.1);
+  }
+  28% {
+    transform: scale(1);
+  }
+  42% {
+    transform: scale(1.1);
+  }
+  70% {
+    transform: scale(1);
+  }
+}
+
+.timer-heartbeat {
+  animation: timer-heartbeat 2s ease-in-out infinite;
+}
+
+/* 波纹效果 */
+@keyframes timer-ripple {
+  0% {
+    transform: scale(0);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+.timer-ripple::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  animation: timer-ripple 2s ease-out infinite;
+}
+
+/* 组合动画类 */
+.timer-display-container {
+  transition: all var(--timer-animation-duration) var(--timer-animation-easing);
+}
+
+/* 响应式动画控制 */
+@media (prefers-reduced-motion: reduce) {
+  .timer-pulse,
+  .timer-breathing,
+  .timer-rotation,
+  .timer-glow,
+  .timer-neon,
+  .timer-bounce,
+  .timer-swing,
+  .timer-fade,
+  .timer-scale,
+  .timer-rainbow,
+  .timer-progress-glow,
+  .timer-flip,
+  .timer-state-change,
+  .timer-heartbeat,
+  .timer-ripple::before {
+    animation: none !important;
+  }
+  
+  .timer-display-container {
+    transition: none !important;
+  }
+}
+
+/* 暗色主题适配 */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --timer-glow-intensity: 15px;
+  }
+}
+
+/* 高对比度模式适配 */
+@media (prefers-contrast: high) {
+  .timer-glow,
+  .timer-neon,
+  .timer-progress-glow {
+    animation: none;
+  }
+}
+
+/* 动画性能优化 */
+.timer-display-container,
+.timer-pulse,
+.timer-breathing,
+.timer-rotation,
+.timer-glow,
+.timer-neon,
+.timer-bounce,
+.timer-swing,
+.timer-fade,
+.timer-scale,
+.timer-rainbow,
+.timer-progress-glow,
+.timer-flip,
+.timer-state-change,
+.timer-heartbeat {
+  will-change: transform, opacity, color, box-shadow, text-shadow;
+}
+
+/* 动画暂停控制 */
+.timer-animations-paused * {
+  animation-play-state: paused !important;
+}

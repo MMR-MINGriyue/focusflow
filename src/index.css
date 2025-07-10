@@ -1,3 +1,6 @@
+/* 导入计时器动画样式 */
+@import './styles/timerAnimations.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
