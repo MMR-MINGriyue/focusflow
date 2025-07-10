@@ -8,7 +8,7 @@ use window_shadows::set_shadow;
 
 fn main() {
   tauri::Builder::default()
-    .plugin(tauri_plugin_sql::Builder::default().build())
+    // .plugin(tauri_plugin_sql::Builder::default().build())
     .setup(|app| {
       let window = app.get_window("main").unwrap();
 

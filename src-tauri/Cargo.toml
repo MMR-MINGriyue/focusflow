@@ -15,7 +15,7 @@ tauri-build = { version = "1.5.0", features = [] }
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 tauri = { version = "1.5.2", features = [ "shell-open", "fs-write-file", "fs-read-dir", "fs-remove-dir", "fs-exists", "fs-read-file", "fs-create-dir", "fs-remove-file", "window-all", "notification-all"] }
-tauri-plugin-sql = { version = "1.0", features = ["sqlite"] }
+# tauri-plugin-sql = { version = "1.4.0", features = ["sqlite"] }
 window-shadows = "0.2.1"
 
 [features]

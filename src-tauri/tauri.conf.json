@@ -34,14 +34,11 @@
         "scope": ["$APPDATA/*"]
       }
     },
-    "plugins": {
-      "sql": {
-        "preload": ["sqlite:focusflow.db"]
-      }
-    },
+
     "bundle": {
       "active": false,
-      "identifier": "com.focusflow.dev"
+      "identifier": "com.focusflow.dev",
+      "icon": []
     },
     "security": {
       "csp": null

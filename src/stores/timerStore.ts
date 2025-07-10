@@ -8,6 +8,15 @@ import { databaseService, type DailyStats } from '../services/database';
 
 export type TimerState = 'focus' | 'break' | 'microBreak';
 
+export interface EfficiencyRatingData {
+  overallRating: number;
+  focusLevel: number;
+  energyLevel: number;
+  satisfaction: number;
+  notes?: string;
+  tags: string[];
+}
+
 export interface TimerSettings {
   focusDuration: number;
   breakDuration: number;
@@ -25,12 +34,12 @@ interface TimerStore {
   timeLeft: number;
   isActive: boolean;
   settings: TimerSettings;
-  
+
   // 微休息相关
   nextMicroBreakInterval: number;
   lastMicroBreakTime: number;
   focusStartTime: number;
-  
+
   // 统计数据
   todayStats: {
     focusTime: number;
@@ -46,11 +55,21 @@ interface TimerStore {
     focusTime: number;
     breakTime: number;
     microBreaks: number;
+    lastCompletedDuration?: number; // 最后完成的会话时长
+    lastCompletedType?: TimerState; // 最后完成的会话类型
   };
 
   // 历史数据
   recentSessions: DailyStats[];
   isLoadingData: boolean;
+
+  // 效率评分相关
+  showRatingDialog: boolean;
+  pendingRatingSession: {
+    duration: number;
+    type: TimerState;
+    sessionId?: number;
+  } | null;
   
   // Actions
   startTimer: () => void;
@@ -68,7 +87,12 @@ interface TimerStore {
   // 统计相关
   updateTodayStats: (type: 'focus' | 'break' | 'microBreak', duration: number) => void;
   updateEfficiency: (score: number) => void;
-  
+
+  // 效率评分相关
+  showEfficiencyRating: (sessionData: { duration: number; type: TimerState; sessionId?: number }) => void;
+  hideEfficiencyRating: () => void;
+  submitEfficiencyRating: (rating: EfficiencyRatingData) => Promise<void>;
+
   // 持久化
   saveToStorage: () => Promise<void>;
   loadFromStorage: () => Promise<void>;
@@ -118,10 +142,16 @@ export const useTimerStore = create<TimerStore>()(
         focusTime: 0,
         breakTime: 0,
         microBreaks: 0,
+        lastCompletedDuration: 0,
+        lastCompletedType: 'focus',
       },
 
       recentSessions: [],
       isLoadingData: false,
+
+      // 效率评分初始状态
+      showRatingDialog: false,
+      pendingRatingSession: null,
       
       // 计时器控制
       startTimer: () => set((state) => {
@@ -135,7 +165,7 @@ export const useTimerStore = create<TimerStore>()(
         
         // 播放开始音效
         if (state.settings.soundEnabled) {
-          soundService.play(state.currentState === 'focus' ? 'focusStart' : 'breakStart');
+          soundService.playMapped(state.currentState === 'focus' ? 'focusStart' : 'breakStart');
         }
       }),
       
@@ -156,8 +186,20 @@ export const useTimerStore = create<TimerStore>()(
       // 状态转换
       transitionTo: (newState: TimerState) => set((state) => {
         const oldState = state.currentState;
+
+        // 记录完成的会话信息（用于效率评分）
+        if (oldState === 'focus' && newState === 'break') {
+          state.currentSession.lastCompletedDuration = state.settings.focusDuration;
+          state.currentSession.lastCompletedType = 'focus';
+        } else if (oldState === 'microBreak' && newState === 'focus') {
+          state.currentSession.lastCompletedDuration = Math.round(
+            (state.settings.microBreakDuration + 2) / 60 // 转换为分钟
+          );
+          state.currentSession.lastCompletedType = 'microBreak';
+        }
+
         state.currentState = newState;
-        
+
         // 更新时间
         switch (newState) {
           case 'focus':
@@ -166,6 +208,16 @@ export const useTimerStore = create<TimerStore>()(
             break;
           case 'break':
             state.timeLeft = state.settings.breakDuration * 60;
+            // 专注会话结束，触发效率评分
+            if (oldState === 'focus') {
+              setTimeout(() => {
+                get().showEfficiencyRating({
+                  duration: state.settings.focusDuration,
+                  type: 'focus',
+                  sessionId: state.currentSession.id || undefined,
+                });
+              }, 1000); // 延迟1秒显示，让用户先看到状态变化
+            }
             break;
           case 'microBreak':
             const duration = cryptoService.generateMicroBreakDuration(
@@ -175,7 +227,7 @@ export const useTimerStore = create<TimerStore>()(
             state.timeLeft = duration;
             break;
         }
-        
+
         // 更新统计
         if (oldState !== newState) {
           get().updateTodayStats(oldState, 0); // 记录状态切换
@@ -188,7 +240,7 @@ export const useTimerStore = create<TimerStore>()(
             break: 'breakStart',
             microBreak: 'microBreak'
           } as const;
-          soundService.play(soundMap[newState]);
+          soundService.playMapped(soundMap[newState]);
         }
         
         if (state.settings.notificationEnabled) {
@@ -347,6 +399,60 @@ export const useTimerStore = create<TimerStore>()(
         } catch (error) {
           console.error('Failed to get database stats:', error);
           return null;
+        }
+      },
+
+      // 效率评分方法
+      showEfficiencyRating: (sessionData: { duration: number; type: TimerState; sessionId?: number }) => set((state) => {
+        state.showRatingDialog = true;
+        state.pendingRatingSession = sessionData;
+      }),
+
+      hideEfficiencyRating: () => set((state) => {
+        state.showRatingDialog = false;
+        state.pendingRatingSession = null;
+      }),
+
+      submitEfficiencyRating: async (rating: EfficiencyRatingData) => {
+        const state = get();
+        try {
+          // 更新当前统计中的效率评分
+          const averageRating = (rating.overallRating + rating.focusLevel + rating.energyLevel + rating.satisfaction) / 4;
+
+          set((draft) => {
+            draft.todayStats.efficiency = Math.round(averageRating * 20); // 转换为0-100分制
+          });
+
+          // 如果有会话ID，更新数据库中的效率评分
+          if (state.pendingRatingSession?.sessionId) {
+            await databaseService.updateSessionEfficiency(
+              state.pendingRatingSession.sessionId,
+              Math.round(averageRating * 20)
+            );
+          }
+
+          // 保存评分数据到数据库（可以扩展为单独的评分表）
+          const ratingData = {
+            session_id: state.pendingRatingSession?.sessionId,
+            overall_rating: rating.overallRating,
+            focus_level: rating.focusLevel,
+            energy_level: rating.energyLevel,
+            satisfaction: rating.satisfaction,
+            notes: rating.notes || '',
+            tags: rating.tags.join(','),
+            created_at: new Date().toISOString(),
+          };
+
+          // 这里可以添加保存详细评分数据的逻辑
+          console.log('Efficiency rating submitted:', ratingData);
+
+          // 隐藏评分对话框
+          get().hideEfficiencyRating();
+
+          // 保存到存储
+          await get().saveToStorage();
+        } catch (error) {
+          console.error('Failed to submit efficiency rating:', error);
         }
       },
 

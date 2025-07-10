@@ -132,13 +132,27 @@ class CryptoService {
     lastMicroBreakTime: number,
     nextScheduledInterval: number
   ): boolean {
-    const timeSinceLastBreak = currentFocusTime - lastMicroBreakTime;
-    
+    // 如果还没有开始专注或者间隔时间无效，不触发微休息
+    if (currentFocusTime <= 0 || nextScheduledInterval <= 0) {
+      return false;
+    }
+
+    // 计算距离上次微休息的时间
+    // 如果是第一次（lastMicroBreakTime = 0），则从专注开始计算
+    const timeSinceLastBreak = lastMicroBreakTime === 0
+      ? currentFocusTime
+      : currentFocusTime - lastMicroBreakTime;
+
+    // 确保时间计算合理
+    if (timeSinceLastBreak < 0) {
+      return false;
+    }
+
     // 基本条件：达到计划间隔
     if (timeSinceLastBreak >= nextScheduledInterval) {
       return true;
     }
-    
+
     // 高级条件：基于概率的早期触发
     // 随着时间接近计划间隔，触发概率逐渐增加
     const progress = timeSinceLastBreak / nextScheduledInterval;
@@ -146,7 +160,7 @@ class CryptoService {
       const triggerProbability = Math.pow(progress - 0.8, 2) * 0.1; // 最大 2% 概率
       return this.generateRandomFloat() < triggerProbability;
     }
-    
+
     return false;
   }
 }

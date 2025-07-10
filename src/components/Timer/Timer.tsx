@@ -7,6 +7,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/Tooltip';
 import { Play, Pause, RotateCcw, Settings as SettingsIcon } from 'lucide-react';
 import Settings from '../Settings/Settings';
+import EfficiencyRating from './EfficiencyRating';
+import { wrapFunction } from '../../utils/errorHandler';
+
 
 interface TimerProps {
   onStateChange?: (state: 'focus' | 'break' | 'microBreak') => void;
@@ -21,7 +24,11 @@ const Timer: React.FC<TimerProps> = ({ onStateChange }) => {
     pauseTimer,
     resetTimer,
     updateSettings,
-    settings
+    settings,
+    showRatingDialog,
+    pendingRatingSession,
+    hideEfficiencyRating,
+    submitEfficiencyRating
   } = useTimerStore();
 
   const {
@@ -38,19 +45,24 @@ const Timer: React.FC<TimerProps> = ({ onStateChange }) => {
     onStateChange?.(currentState);
   }, [currentState, onStateChange]);
 
-  // 计时器控制函数
-  const toggleTimer = () => {
+  // 计时器控制函数（包装错误处理）
+  const toggleTimer = wrapFunction(() => {
     if (isActive) {
       pauseTimer();
     } else {
       startTimer();
     }
-  };
+  }, { component: 'Timer', action: 'toggleTimer' });
 
-  // 设置变化处理
-  const handleSettingsChange = (newSettings: typeof settings) => {
+  // 设置变化处理（包装错误处理）
+  const handleSettingsChange = wrapFunction((newSettings: typeof settings) => {
     updateSettings(newSettings);
-  };
+  }, { component: 'Timer', action: 'updateSettings' });
+
+  // 重置计时器（包装错误处理）
+  const handleReset = wrapFunction(() => {
+    resetTimer();
+  }, { component: 'Timer', action: 'resetTimer' });
 
   return (
     <TooltipProvider>
@@ -84,7 +96,7 @@ const Timer: React.FC<TimerProps> = ({ onStateChange }) => {
             {Math.round(progress)}% 完成
           </div>
         </div>
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-3" data-tour="timer-controls">
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -105,7 +117,7 @@ const Timer: React.FC<TimerProps> = ({ onStateChange }) => {
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
-                onClick={resetTimer}
+                onClick={handleReset}
                 size="lg"
                 variant="outline"
                 className="flex items-center space-x-2"
@@ -127,6 +139,7 @@ const Timer: React.FC<TimerProps> = ({ onStateChange }) => {
                     size="lg"
                     variant="ghost"
                     className="flex items-center space-x-2"
+                    data-tour="settings-button"
                   >
                     <SettingsIcon className="h-5 w-5" />
                     <span>设置</span>
@@ -157,6 +170,14 @@ const Timer: React.FC<TimerProps> = ({ onStateChange }) => {
           onSettingsChange={handleSettingsChange}
         />
       )}
+
+      {/* 效率评分对话框 */}
+      <EfficiencyRating
+        isOpen={showRatingDialog}
+        onClose={hideEfficiencyRating}
+        onSubmit={submitEfficiencyRating}
+        sessionData={pendingRatingSession || { duration: 0, type: 'focus' }}
+      />
       </div>
     </TooltipProvider>
   );

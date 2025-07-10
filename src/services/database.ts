@@ -1,4 +1,5 @@
 import Database from '@tauri-apps/plugin-sql';
+import { logError } from '../utils/errorHandler';
 
 export interface FocusSession {
   id?: number;
@@ -28,6 +29,7 @@ export interface DailyStats {
 class DatabaseService {
   private db: Database | null = null;
   private isInitialized = false;
+  private initializationPromise: Promise<void> | null = null;
 
   /**
    * 初始化数据库连接
@@ -35,18 +37,39 @@ class DatabaseService {
   async initialize(): Promise<void> {
     if (this.isInitialized) return;
 
+    // 防止重复初始化
+    if (this.initializationPromise) {
+      return this.initializationPromise;
+    }
+
+    this.initializationPromise = this.doInitialize();
+    return this.initializationPromise;
+  }
+
+  private async doInitialize(): Promise<void> {
     try {
       // 连接到 SQLite 数据库
       this.db = await Database.load('sqlite:focusflow.db');
-      
+
       // 创建表结构
       await this.createTables();
-      
+
       this.isInitialized = true;
       console.log('Database initialized successfully');
     } catch (error) {
+      const errorId = logError(error instanceof Error ? error : new Error(String(error)), {
+        operation: 'database_initialize',
+        dbPath: 'sqlite:focusflow.db'
+      }, 'critical');
+
       console.error('Failed to initialize database:', error);
-      throw error;
+
+      // 重置状态以允许重试
+      this.initializationPromise = null;
+      this.isInitialized = false;
+      this.db = null;
+
+      throw new Error(`数据库初始化失败 (错误ID: ${errorId})`);
     }
   }
 
