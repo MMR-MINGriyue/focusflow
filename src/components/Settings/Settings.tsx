@@ -2,13 +2,15 @@ import React, { useState } from 'react';
 import { TimerSettings } from '../../stores/timerStore';
 import { Switch } from '../ui/Switch';
 import { Slider } from '../ui/Slider';
-import { Volume2, Bell, Clock, Play, Pause, Settings as SettingsIcon } from 'lucide-react';
+import { Volume2, Bell, Clock, Play, Pause, Settings as SettingsIcon, Palette } from 'lucide-react';
 import { soundService } from '../../services/sound';
 import SoundManager from './SoundManager';
 import SoundMappingConfig from './SoundMappingConfig';
 import SoundVolumeControl from './SoundVolumeControl';
 import SoundPersistenceTest from './SoundPersistenceTest';
-// import ThemeSelector from './ThemeSelector'; // TODO: 集成主题选择器
+import ThemeEditor from './ThemeEditor';
+import ThemeSelector from './ThemeSelector';
+import ThemeManager from './ThemeManager';
 
 interface SettingsProps extends TimerSettings {
   onSettingsChange: (settings: TimerSettings) => void;
@@ -26,7 +28,7 @@ const Settings: React.FC<SettingsProps> = ({
   onSettingsChange,
 }) => {
   const [playingSound, setPlayingSound] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'basic' | 'sound' | 'mapping' | 'volume' | 'test'>('basic');
+  const [activeTab, setActiveTab] = useState<'basic' | 'sound' | 'mapping' | 'volume' | 'test' | 'theme' | 'themeEditor' | 'themeManager'>('basic');
   const [showSoundManager, setShowSoundManager] = useState(false);
 
   // 音效类型定义
@@ -106,6 +108,9 @@ const Settings: React.FC<SettingsProps> = ({
     { id: 'sound', name: '音效管理', icon: <Volume2 className="h-4 w-4" /> },
     { id: 'mapping', name: '音效映射', icon: <SettingsIcon className="h-4 w-4" /> },
     { id: 'volume', name: '音量控制', icon: <Bell className="h-4 w-4" /> },
+    { id: 'theme', name: '主题选择', icon: <Palette className="h-4 w-4" /> },
+    { id: 'themeEditor', name: '主题编辑', icon: <Palette className="h-4 w-4" /> },
+    { id: 'themeManager', name: '主题管理', icon: <Palette className="h-4 w-4" /> },
     { id: 'test', name: '持久化测试', icon: <Play className="h-4 w-4" /> },
   ] as const;
 
@@ -422,6 +427,21 @@ const Settings: React.FC<SettingsProps> = ({
       {/* 音量控制标签页 */}
       {activeTab === 'volume' && (
         <SoundVolumeControl onVolumeChange={(volume) => handleSliderChange('volume', volume)} />
+      )}
+
+      {/* 主题选择标签页 */}
+      {activeTab === 'theme' && (
+        <ThemeSelector onThemeChange={handleSoundSettingsChange} />
+      )}
+
+      {/* 主题编辑标签页 */}
+      {activeTab === 'themeEditor' && (
+        <ThemeEditor onThemeChange={handleSoundSettingsChange} />
+      )}
+
+      {/* 主题管理标签页 */}
+      {activeTab === 'themeManager' && (
+        <ThemeManager onThemeChange={handleSoundSettingsChange} />
       )}
 
       {/* 持久化测试标签页 */}

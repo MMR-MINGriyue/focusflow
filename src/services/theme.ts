@@ -2,9 +2,12 @@ import { Theme, themes } from '../types/theme';
 
 class ThemeService {
   private currentTheme: Theme;
+  private customThemes: Theme[] = [];
+  private currentPreviewTheme: Theme | null = null;
   private listeners: ((theme: Theme) => void)[] = [];
 
   constructor() {
+    this.loadCustomThemes();
     this.currentTheme = this.loadTheme();
     this.applyTheme(this.currentTheme);
   }
@@ -20,20 +23,22 @@ class ThemeService {
    * 获取所有可用主题
    */
   getAllThemes(): Theme[] {
-    return themes;
+    return [...themes, ...this.customThemes];
   }
 
   /**
    * 设置主题
    */
   setTheme(themeId: string) {
-    const theme = themes.find(t => t.id === themeId);
+    const allThemes = this.getAllThemes();
+    const theme = allThemes.find(t => t.id === themeId);
     if (!theme) {
       console.warn(`Theme with id "${themeId}" not found`);
       return;
     }
 
     this.currentTheme = theme;
+    this.currentPreviewTheme = null; // 清除预览状态
     this.applyTheme(theme);
     this.saveTheme(theme);
     this.notifyListeners(theme);
@@ -222,25 +227,183 @@ class ThemeService {
   importTheme(themeJson: string): Theme | null {
     try {
       const theme = JSON.parse(themeJson) as Theme;
-      
+
       // 验证主题格式
       if (!theme.id || !theme.name || !theme.colors || !theme.cssVariables) {
         throw new Error('Invalid theme format');
       }
 
-      // 添加到主题列表（如果不存在）
-      const existingIndex = themes.findIndex(t => t.id === theme.id);
-      if (existingIndex >= 0) {
-        themes[existingIndex] = theme;
-      } else {
-        themes.push(theme);
-      }
-
+      // 添加到自定义主题列表
+      this.addCustomTheme(theme);
       return theme;
     } catch (error) {
       console.error('Failed to import theme:', error);
       return null;
     }
+  }
+
+  /**
+   * 添加自定义主题
+   */
+  addCustomTheme(theme: Theme): void {
+    // 确保ID唯一
+    const existingIndex = this.customThemes.findIndex(t => t.id === theme.id);
+    if (existingIndex >= 0) {
+      this.customThemes[existingIndex] = theme;
+    } else {
+      this.customThemes.push(theme);
+    }
+
+    this.saveCustomThemes();
+  }
+
+  /**
+   * 删除自定义主题
+   */
+  removeCustomTheme(themeId: string): boolean {
+    const index = this.customThemes.findIndex(t => t.id === themeId);
+    if (index >= 0) {
+      this.customThemes.splice(index, 1);
+      this.saveCustomThemes();
+
+      // 如果删除的是当前主题，切换到默认主题
+      if (this.currentTheme.id === themeId) {
+        this.setTheme('light');
+      }
+
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * 获取自定义主题列表
+   */
+  getCustomThemes(): Theme[] {
+    return [...this.customThemes];
+  }
+
+  /**
+   * 预览主题（不保存）
+   */
+  previewTheme(theme: Theme): void {
+    this.currentPreviewTheme = theme;
+    this.applyTheme(theme);
+  }
+
+  /**
+   * 退出预览模式
+   */
+  exitPreview(): void {
+    if (this.currentPreviewTheme) {
+      this.currentPreviewTheme = null;
+      this.applyTheme(this.currentTheme);
+    }
+  }
+
+  /**
+   * 检查是否在预览模式
+   */
+  isInPreviewMode(): boolean {
+    return this.currentPreviewTheme !== null;
+  }
+
+  /**
+   * 获取预览主题
+   */
+  getPreviewTheme(): Theme | null {
+    return this.currentPreviewTheme;
+  }
+
+  /**
+   * 加载自定义主题
+   */
+  private loadCustomThemes(): void {
+    try {
+      const saved = localStorage.getItem('focusflow-custom-themes');
+      if (saved) {
+        const themes = JSON.parse(saved) as Theme[];
+        if (Array.isArray(themes)) {
+          this.customThemes = themes.filter(theme =>
+            theme.id && theme.name && theme.colors && theme.cssVariables
+          );
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to load custom themes:', error);
+      this.customThemes = [];
+    }
+  }
+
+  /**
+   * 保存自定义主题
+   */
+  private saveCustomThemes(): void {
+    try {
+      localStorage.setItem('focusflow-custom-themes', JSON.stringify(this.customThemes));
+    } catch (error) {
+      console.warn('Failed to save custom themes:', error);
+    }
+  }
+
+  /**
+   * 验证主题数据完整性
+   */
+  validateTheme(theme: any): theme is Theme {
+    return (
+      typeof theme === 'object' &&
+      typeof theme.id === 'string' &&
+      typeof theme.name === 'string' &&
+      typeof theme.description === 'string' &&
+      ['light', 'dark', 'auto'].includes(theme.type) &&
+      typeof theme.colors === 'object' &&
+      typeof theme.cssVariables === 'object'
+    );
+  }
+
+  /**
+   * 复制主题
+   */
+  duplicateTheme(themeId: string, newName?: string): Theme | null {
+    const allThemes = this.getAllThemes();
+    const sourceTheme = allThemes.find(t => t.id === themeId);
+
+    if (!sourceTheme) {
+      return null;
+    }
+
+    const duplicatedTheme: Theme = {
+      ...sourceTheme,
+      id: `custom_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
+      name: newName || `${sourceTheme.name} (副本)`,
+      description: `基于 ${sourceTheme.name} 的自定义主题`
+    };
+
+    this.addCustomTheme(duplicatedTheme);
+    return duplicatedTheme;
+  }
+
+  /**
+   * 重命名自定义主题
+   */
+  renameCustomTheme(themeId: string, newName: string, newDescription?: string): boolean {
+    const theme = this.customThemes.find(t => t.id === themeId);
+    if (theme) {
+      theme.name = newName;
+      if (newDescription !== undefined) {
+        theme.description = newDescription;
+      }
+      this.saveCustomThemes();
+
+      // 如果是当前主题，通知监听器
+      if (this.currentTheme.id === themeId) {
+        this.currentTheme = theme;
+        this.notifyListeners(theme);
+      }
+
+      return true;
+    }
+    return false;
   }
 }
 
