@@ -57,9 +57,9 @@ const TimerStyleEditor: React.FC<TimerStyleEditorProps> = ({ onStyleChange }) =>
 
     // 如果在预览模式，立即应用
     if (previewMode) {
-      timerStyleService.previewStyle(updatedStyle.id);
       // 临时添加到服务中进行预览
       timerStyleService.addCustomStyle(updatedStyle);
+      timerStyleService.previewStyle(updatedStyle.id);
     }
   };
 

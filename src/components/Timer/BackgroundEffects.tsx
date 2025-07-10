@@ -1,5 +1,6 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useCallback, useMemo } from 'react';
 import { TimerStyleConfig } from '../../types/timerStyle';
+import { getAdaptivePerformanceConfig, throttle } from '../../utils/performance';
 
 interface BackgroundEffectsProps {
   style: TimerStyleConfig;
@@ -7,16 +8,37 @@ interface BackgroundEffectsProps {
   className?: string;
 }
 
-const BackgroundEffects: React.FC<BackgroundEffectsProps> = ({ 
-  style, 
-  isActive, 
-  className = '' 
+const BackgroundEffects: React.FC<BackgroundEffectsProps> = React.memo(({
+  style,
+  isActive,
+  className = ''
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number>();
   const particlesRef = useRef<Particle[]>([]);
 
-  // 粒子类
+  // 性能配置
+  const performanceConfig = useMemo(() => getAdaptivePerformanceConfig(), []);
+
+  // 优化后的样式配置
+  const optimizedStyle = useMemo(() => ({
+    ...style,
+    particles: {
+      ...style.particles,
+      count: Math.min(style.particles.count, performanceConfig.particleCount),
+      effect: performanceConfig.enableBackgroundEffects ? style.particles.effect : 'none'
+    },
+    background: {
+      ...style.background,
+      pattern: performanceConfig.enableBackgroundEffects ? style.background.pattern : 'none'
+    },
+    decoration: {
+      ...style.decoration,
+      element: performanceConfig.enableComplexDecorations ? style.decoration.element : 'none'
+    }
+  }), [style, performanceConfig]);
+
+  // 粒子类定义
   class Particle {
     x: number;
     y: number;
@@ -111,28 +133,28 @@ const BackgroundEffects: React.FC<BackgroundEffectsProps> = ({
     }
   }
 
-  // 初始化粒子
-  const initParticles = () => {
+  // 初始化粒子（使用优化后的样式）
+  const initParticles = useCallback(() => {
     const canvas = canvasRef.current;
-    if (!canvas || style.particles.effect === 'none') return;
+    if (!canvas || optimizedStyle.particles.effect === 'none') return;
 
     particlesRef.current = [];
-    for (let i = 0; i < style.particles.count; i++) {
-      particlesRef.current.push(new Particle(canvas, style.particles));
+    for (let i = 0; i < optimizedStyle.particles.count; i++) {
+      particlesRef.current.push(new Particle(canvas, optimizedStyle.particles));
     }
-  };
+  }, [optimizedStyle.particles]);
 
-  // 动画循环
-  const animate = () => {
+  // 动画循环（优化性能）
+  const animate = useCallback(() => {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext('2d');
-    if (!canvas || !ctx || style.particles.effect === 'none') return;
+    if (!canvas || !ctx || optimizedStyle.particles.effect === 'none') return;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     // 更新和绘制粒子
     particlesRef.current = particlesRef.current.filter(particle => {
-      const alive = particle.update(canvas, style.particles);
+      const alive = particle.update(canvas, optimizedStyle.particles);
       if (alive) {
         particle.draw(ctx);
       }
@@ -140,51 +162,55 @@ const BackgroundEffects: React.FC<BackgroundEffectsProps> = ({
     });
 
     // 补充新粒子
-    while (particlesRef.current.length < style.particles.count) {
-      particlesRef.current.push(new Particle(canvas, style.particles));
+    while (particlesRef.current.length < optimizedStyle.particles.count) {
+      particlesRef.current.push(new Particle(canvas, optimizedStyle.particles));
     }
 
-    if (isActive) {
+    if (isActive && performanceConfig.enableAnimations) {
       animationRef.current = requestAnimationFrame(animate);
     }
-  };
+  }, [optimizedStyle.particles, isActive, performanceConfig.enableAnimations]);
 
   // 调整画布尺寸
-  const resizeCanvas = () => {
+  const resizeCanvas = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     const rect = canvas.getBoundingClientRect();
     canvas.width = rect.width;
     canvas.height = rect.height;
-  };
+  }, []);
+
+  // 节流的resize处理函数
+  const throttledResize = useMemo(
+    () => throttle(() => {
+      resizeCanvas();
+      initParticles();
+    }, 100),
+    [resizeCanvas, initParticles]
+  );
 
   useEffect(() => {
     resizeCanvas();
     initParticles();
-    
-    if (isActive && style.particles.effect !== 'none') {
+
+    if (isActive && optimizedStyle.particles.effect !== 'none' && performanceConfig.enableAnimations) {
       animate();
     }
 
-    const handleResize = () => {
-      resizeCanvas();
-      initParticles();
-    };
-
-    window.addEventListener('resize', handleResize);
+    window.addEventListener('resize', throttledResize);
 
     return () => {
-      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('resize', throttledResize);
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [style.particles, isActive]);
+  }, [optimizedStyle.particles, isActive, animate, initParticles, resizeCanvas, throttledResize, performanceConfig.enableAnimations]);
 
-  // 生成背景图案的SVG
-  const generateBackgroundPattern = () => {
-    const { pattern, color, size, opacity } = style.background;
+  // 生成背景图案的SVG（使用优化后的样式）
+  const generateBackgroundPattern = useMemo(() => {
+    const { pattern, color, size, opacity } = optimizedStyle.background;
     
     if (pattern === 'none') return null;
 
@@ -278,11 +304,11 @@ const BackgroundEffects: React.FC<BackgroundEffectsProps> = ({
       default:
         return null;
     }
-  };
+  }, [optimizedStyle.background]);
 
-  // 生成装饰元素
-  const generateDecoration = () => {
-    const { element, intensity, color, animated } = style.decoration;
+  // 生成装饰元素（使用优化后的样式）
+  const generateDecoration = useMemo(() => {
+    const { element, intensity, color, animated } = optimizedStyle.decoration;
     
     if (element === 'none') return null;
 
@@ -360,25 +386,27 @@ const BackgroundEffects: React.FC<BackgroundEffectsProps> = ({
       default:
         return null;
     }
-  };
+  }, [optimizedStyle.decoration]);
 
   return (
     <div className={`absolute inset-0 overflow-hidden ${className}`}>
       {/* 背景图案 */}
-      {generateBackgroundPattern()}
-      
+      {generateBackgroundPattern}
+
       {/* 粒子效果画布 */}
-      {style.particles.effect !== 'none' && (
+      {optimizedStyle.particles.effect !== 'none' && (
         <canvas
           ref={canvasRef}
           className="absolute inset-0 w-full h-full pointer-events-none"
         />
       )}
-      
+
       {/* 装饰元素 */}
-      {generateDecoration()}
+      {generateDecoration}
     </div>
   );
-};
+});
+
+BackgroundEffects.displayName = 'BackgroundEffects';
 
 export default BackgroundEffects;

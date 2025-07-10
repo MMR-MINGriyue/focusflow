@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { TimerStyleConfig } from '../../types/timerStyle';
 import { timerStyleService } from '../../services/timerStyle';
 import BackgroundEffects from './BackgroundEffects';
+import { usePerformanceMonitor, getAdaptivePerformanceConfig } from '../../utils/performance';
 
 // 响应式断点
 const BREAKPOINTS = {
@@ -19,7 +20,7 @@ interface TimerDisplayProps {
   className?: string;
 }
 
-const TimerDisplay: React.FC<TimerDisplayProps> = ({
+const TimerDisplay: React.FC<TimerDisplayProps> = React.memo(({
   time,
   formattedTime,
   currentState,
@@ -31,6 +32,12 @@ const TimerDisplay: React.FC<TimerDisplayProps> = ({
   const [currentStyle, setCurrentStyle] = useState<TimerStyleConfig>(timerStyleService.getCurrentStyle());
   const [screenSize, setScreenSize] = useState<'mobile' | 'tablet' | 'desktop'>('desktop');
 
+  // 性能监控
+  const { recordUpdate } = usePerformanceMonitor('TimerDisplay');
+
+  // 自适应性能配置
+  const performanceConfig = useMemo(() => getAdaptivePerformanceConfig(), []);
+
   // 获取当前屏幕尺寸
   const getScreenSize = (): 'mobile' | 'tablet' | 'desktop' => {
     const width = window.innerWidth;
@@ -39,15 +46,15 @@ const TimerDisplay: React.FC<TimerDisplayProps> = ({
     return 'desktop';
   };
 
-  // 获取响应式样式配置
-  const getResponsiveStyle = (baseStyle: TimerStyleConfig): TimerStyleConfig => {
+  // 获取响应式样式配置（使用useCallback优化）
+  const getResponsiveStyle = useCallback((baseStyle: TimerStyleConfig): TimerStyleConfig => {
     if (!baseStyle.responsive.enabled) return baseStyle;
 
     const breakpointConfig = baseStyle.responsive.breakpoints[screenSize];
     if (!breakpointConfig) return baseStyle;
 
-    // 合并基础样式和断点配置
-    return {
+    // 合并基础样式和断点配置，并应用性能优化
+    const optimizedStyle = {
       ...baseStyle,
       ...breakpointConfig,
       layout: {
@@ -56,13 +63,29 @@ const TimerDisplay: React.FC<TimerDisplayProps> = ({
       },
       animations: {
         ...baseStyle.animations,
-        ...breakpointConfig.animations
+        ...breakpointConfig.animations,
+        // 在低性能设备上禁用动画
+        enabled: baseStyle.animations.enabled && performanceConfig.enableAnimations
+      },
+      particles: {
+        ...baseStyle.particles,
+        // 在低性能设备上减少粒子数量
+        count: Math.min(baseStyle.particles.count, performanceConfig.particleCount)
+      },
+      background: {
+        ...baseStyle.background,
+        // 在低性能设备上禁用背景效果
+        pattern: performanceConfig.enableBackgroundEffects ? baseStyle.background.pattern : 'none'
       }
     };
-  };
+
+    return optimizedStyle;
+  }, [screenSize, performanceConfig]);
 
   useEffect(() => {
     const handleStyleChange = () => {
+      recordUpdate(); // 记录组件更新
+
       // 根据状态获取样式
       const style = timerStyleService.getStyleForState(currentState);
       const responsiveStyle = getResponsiveStyle(style);
@@ -88,7 +111,7 @@ const TimerDisplay: React.FC<TimerDisplayProps> = ({
       timerStyleService.removeListener(handleStyleChange);
       window.removeEventListener('resize', handleResize);
     };
-  }, [currentState, screenSize]);
+  }, [currentState, screenSize, getResponsiveStyle, recordUpdate]);
 
   // 根据样式类型渲染不同的显示组件
   const renderDisplay = () => {
@@ -157,7 +180,9 @@ const TimerDisplay: React.FC<TimerDisplayProps> = ({
       </div>
     </div>
   );
-};
+});
+
+TimerDisplay.displayName = 'TimerDisplay';
 
 // 数字显示组件
 const DigitalDisplay: React.FC<{
@@ -528,12 +553,12 @@ const NeonDisplay: React.FC<{
   };
 
   return (
-    <div 
+    <div
       className="neon-timer-display p-8 rounded-lg"
       style={{ backgroundColor: style.colors.background }}
     >
       <div className="flex flex-col items-center space-y-6">
-        <div 
+        <div
           className={`timer-time ${style.animations.enabled ? 'transition-all duration-300' : ''} ${
             style.animations.breathingEffect ? 'animate-pulse' : ''
           }`}
@@ -553,11 +578,11 @@ const NeonDisplay: React.FC<{
         >
           {formattedTime}
         </div>
-        
+
         {style.layout.showStateText && (
-          <div 
+          <div
             className="text-lg font-medium uppercase tracking-widest"
-            style={{ 
+            style={{
               color: getStateColor(),
               textShadow: `0 0 5px ${getStateColor()}`
             }}
@@ -565,22 +590,22 @@ const NeonDisplay: React.FC<{
             {stateText}
           </div>
         )}
-        
+
         <div className="w-64 h-2 bg-gray-800 rounded-full overflow-hidden">
-          <div 
+          <div
             className={`h-full rounded-full ${style.animations.enabled ? 'transition-all duration-300' : ''}`}
-            style={{ 
+            style={{
               width: `${progress}%`,
               backgroundColor: getStateColor(),
               boxShadow: `0 0 10px ${getStateColor()}`
             }}
           />
         </div>
-        
+
         {style.layout.showProgressPercentage && (
-          <div 
+          <div
             className="text-sm font-mono"
-            style={{ 
+            style={{
               color: getStateColor(),
               textShadow: `0 0 3px ${getStateColor()}`
             }}
