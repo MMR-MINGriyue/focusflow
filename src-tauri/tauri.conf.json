@@ -7,7 +7,7 @@
   },
   "package": {
     "productName": "FocusFlow",
-    "version": "0.1.0"
+    "version": "1.0.0"
   },
   "tauri": {
     "allowlist": {
@@ -32,13 +32,22 @@
         "removeFile": true,
         "exists": true,
         "scope": ["$APPDATA/*"]
+      },
+      "globalShortcut": {
+        "all": true
       }
     },
 
     "bundle": {
       "active": false,
-      "identifier": "com.focusflow.dev",
-      "icon": []
+      "identifier": "com.focusflow.app",
+      "icon": [],
+      "resources": [],
+      "externalBin": [],
+      "copyright": "",
+      "category": "Productivity",
+      "shortDescription": "智能专注时间管理应用",
+      "longDescription": "FocusFlow是一个现代化的专注时间管理桌面应用，基于90分钟专注循环和随机微休息，帮助您提高工作效率和专注力。"
     },
     "security": {
       "csp": null
@@ -49,10 +58,17 @@
     "windows": [
       {
         "fullscreen": false,
-        "height": 600,
+        "height": 700,
         "resizable": true,
-        "title": "FocusFlow",
-        "width": 800
+        "title": "FocusFlow - 智能专注管理",
+        "width": 1000,
+        "minHeight": 500,
+        "minWidth": 800,
+        "center": true,
+        "decorations": true,
+        "alwaysOnTop": false,
+        "skipTaskbar": false,
+        "visible": true
       }
     ]
   }

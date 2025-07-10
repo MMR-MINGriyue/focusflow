@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Palette, Trash2, Edit3, Copy, Download, Upload, Eye, EyeOff } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Theme } from '../../types/theme';
@@ -8,6 +8,20 @@ interface ThemeManagerProps {
   onThemeChange?: (theme: Theme) => void;
 }
 
+interface NotificationState {
+  message: string;
+  type: 'success' | 'error' | 'info';
+  visible: boolean;
+}
+
+interface ConfirmDialogState {
+  visible: boolean;
+  title: string;
+  message: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
 const ThemeManager: React.FC<ThemeManagerProps> = ({ onThemeChange }) => {
   const [customThemes, setCustomThemes] = useState<Theme[]>(themeService.getCustomThemes());
   const [currentTheme, setCurrentTheme] = useState<Theme>(themeService.getCurrentTheme());
@@ -15,6 +29,42 @@ const ThemeManager: React.FC<ThemeManagerProps> = ({ onThemeChange }) => {
   const [editingTheme, setEditingTheme] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [editDescription, setEditDescription] = useState('');
+  const [notification, setNotification] = useState<NotificationState>({
+    message: '',
+    type: 'info',
+    visible: false
+  });
+  const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState>({
+    visible: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    onCancel: () => {}
+  });
+
+  // 显示通知
+  const showNotification = useCallback((message: string, type: NotificationState['type'] = 'info') => {
+    setNotification({ message, type, visible: true });
+    setTimeout(() => {
+      setNotification(prev => ({ ...prev, visible: false }));
+    }, 3000);
+  }, []);
+
+  // 显示确认对话框
+  const showConfirmDialog = useCallback((title: string, message: string, onConfirm: () => void) => {
+    setConfirmDialog({
+      visible: true,
+      title,
+      message,
+      onConfirm: () => {
+        onConfirm();
+        setConfirmDialog(prev => ({ ...prev, visible: false }));
+      },
+      onCancel: () => {
+        setConfirmDialog(prev => ({ ...prev, visible: false }));
+      }
+    });
+  }, []);
 
   useEffect(() => {
     const handleThemeChange = (theme: Theme) => {
@@ -32,17 +82,21 @@ const ThemeManager: React.FC<ThemeManagerProps> = ({ onThemeChange }) => {
   };
 
   // 删除自定义主题
-  const deleteTheme = (themeId: string) => {
-    if (confirm('确定要删除这个自定义主题吗？此操作无法撤销。')) {
-      const success = themeService.removeCustomTheme(themeId);
-      if (success) {
-        refreshCustomThemes();
-        alert('主题删除成功！');
-      } else {
-        alert('删除主题失败，请重试。');
+  const deleteTheme = useCallback((themeId: string) => {
+    showConfirmDialog(
+      '删除主题',
+      '确定要删除这个自定义主题吗？此操作无法撤销。',
+      () => {
+        const success = themeService.removeCustomTheme(themeId);
+        if (success) {
+          refreshCustomThemes();
+          showNotification('主题删除成功！', 'success');
+        } else {
+          showNotification('删除主题失败，请重试。', 'error');
+        }
       }
-    }
-  };
+    );
+  }, [showConfirmDialog, showNotification]);
 
   // 开始编辑主题
   const startEditTheme = (theme: Theme) => {
@@ -52,7 +106,7 @@ const ThemeManager: React.FC<ThemeManagerProps> = ({ onThemeChange }) => {
   };
 
   // 保存编辑
-  const saveEdit = () => {
+  const saveEdit = useCallback(() => {
     if (!editingTheme) return;
 
     const success = themeService.renameCustomTheme(editingTheme, editName, editDescription);
@@ -61,10 +115,11 @@ const ThemeManager: React.FC<ThemeManagerProps> = ({ onThemeChange }) => {
       setEditingTheme(null);
       setEditName('');
       setEditDescription('');
+      showNotification('主题信息更新成功！', 'success');
     } else {
-      alert('保存失败，请重试。');
+      showNotification('保存失败，请重试。', 'error');
     }
-  };
+  }, [editingTheme, editName, editDescription, showNotification]);
 
   // 取消编辑
   const cancelEdit = () => {
@@ -74,15 +129,15 @@ const ThemeManager: React.FC<ThemeManagerProps> = ({ onThemeChange }) => {
   };
 
   // 复制主题
-  const duplicateTheme = (themeId: string) => {
+  const duplicateTheme = useCallback((themeId: string) => {
     const duplicated = themeService.duplicateTheme(themeId);
     if (duplicated) {
       refreshCustomThemes();
-      alert(`主题 "${duplicated.name}" 创建成功！`);
+      showNotification(`主题 "${duplicated.name}" 创建成功！`, 'success');
     } else {
-      alert('复制主题失败，请重试。');
+      showNotification('复制主题失败，请重试。', 'error');
     }
-  };
+  }, [showNotification]);
 
   // 导出主题
   const exportTheme = (theme: Theme) => {
@@ -110,13 +165,13 @@ const ThemeManager: React.FC<ThemeManagerProps> = ({ onThemeChange }) => {
         const theme = themeService.importTheme(content);
         if (theme) {
           refreshCustomThemes();
-          alert(`主题 "${theme.name}" 导入成功！`);
+          showNotification(`主题 "${theme.name}" 导入成功！`, 'success');
         } else {
-          alert('导入失败，请检查文件格式。');
+          showNotification('导入失败，请检查文件格式。', 'error');
         }
       } catch (error) {
         console.error('Import error:', error);
-        alert('导入失败，请检查文件格式。');
+        showNotification('导入失败，请检查文件格式。', 'error');
       }
     };
     reader.readAsText(file);
@@ -184,7 +239,7 @@ const ThemeManager: React.FC<ThemeManagerProps> = ({ onThemeChange }) => {
           <div className="flex items-center space-x-3">
             <div
               className="w-8 h-8 rounded-full border-2 border-white shadow-sm"
-              style={{ backgroundColor: currentTheme.colors.primary }}
+              style={{ '--bg-color': currentTheme.colors.primary, backgroundColor: 'var(--bg-color)' } as React.CSSProperties}
             />
             <div>
               <div className="font-medium text-gray-700">{currentTheme.name}</div>
@@ -270,7 +325,7 @@ const ThemeManager: React.FC<ThemeManagerProps> = ({ onThemeChange }) => {
                       <div className="flex items-center space-x-3 flex-1">
                         <div
                           className="w-8 h-8 rounded-full border-2 border-white shadow-sm"
-                          style={{ backgroundColor: theme.colors.primary }}
+                          style={{ '--bg-color': theme.colors.primary, backgroundColor: 'var(--bg-color)' } as React.CSSProperties}
                         />
                         <div className="flex-1">
                           <div className="font-medium text-gray-700">{theme.name}</div>
@@ -384,6 +439,43 @@ const ThemeManager: React.FC<ThemeManagerProps> = ({ onThemeChange }) => {
           <li>删除主题操作无法撤销，请谨慎操作</li>
         </ul>
       </div>
+
+      {/* 确认对话框 */}
+      {confirmDialog.visible && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold mb-2">{confirmDialog.title}</h3>
+            <p className="text-gray-600 mb-4">{confirmDialog.message}</p>
+            <div className="flex justify-end space-x-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={confirmDialog.onCancel}
+              >
+                取消
+              </Button>
+              <Button
+                type="button"
+                onClick={confirmDialog.onConfirm}
+                className="bg-red-500 hover:bg-red-600 text-white"
+              >
+                确认
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 通知组件 */}
+      {notification.visible && (
+        <div className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transition-all duration-300 ${
+          notification.type === 'success' ? 'bg-green-500 text-white' :
+          notification.type === 'error' ? 'bg-red-500 text-white' :
+          'bg-blue-500 text-white'
+        }`}>
+          {notification.message}
+        </div>
+      )}
     </div>
   );
 };

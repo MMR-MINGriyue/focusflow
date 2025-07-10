@@ -83,8 +83,49 @@ class SoundService {
 
   play(soundName: keyof typeof this.sounds) {
     const sound = this.sounds[soundName];
-    if (sound) {
+    if (sound && !this.isMuted) {
+      const effectiveVolume = this.getEffectiveVolume(soundName);
+      sound.volume(effectiveVolume);
       sound.play();
+    }
+  }
+
+  /**
+   * 播放白噪音并淡入（专为专注模式设计）
+   */
+  playWhiteNoiseWithFadeIn(duration: number = 500): void {
+    const whiteNoise = this.sounds.whiteNoise;
+    if (whiteNoise && !this.isMuted) {
+      // 停止当前播放的白噪音
+      whiteNoise.stop();
+
+      // 设置初始音量为0
+      whiteNoise.volume(0);
+
+      // 开始播放
+      whiteNoise.play();
+
+      // 淡入到目标音量
+      const targetVolume = this.getEffectiveVolume('whiteNoise');
+      whiteNoise.fade(0, targetVolume, duration);
+    }
+  }
+
+  /**
+   * 停止白噪音并淡出
+   */
+  stopWhiteNoiseWithFadeOut(duration: number = 500): void {
+    const whiteNoise = this.sounds.whiteNoise;
+    if (whiteNoise) {
+      const currentVolume = whiteNoise.volume();
+      if (currentVolume > 0) {
+        whiteNoise.fade(currentVolume, 0, duration);
+        setTimeout(() => {
+          whiteNoise.stop();
+        }, duration);
+      } else {
+        whiteNoise.stop();
+      }
     }
   }
 
@@ -102,10 +143,33 @@ class SoundService {
     }
   }
 
+  /**
+   * 获取有效音量（考虑主音量和分类音量）
+   */
+  private getEffectiveVolume(soundName: keyof typeof this.sounds): number {
+    if (this.isMuted) return 0;
+
+    const baseVolume = this.sounds[soundName]?.volume() || 0.5;
+    const masterVolume = this.volumeSettings.master;
+
+    // 根据音效类型应用分类音量
+    let categoryVolume = 1.0;
+    if (soundName === 'whiteNoise') {
+      categoryVolume = this.volumeSettings.ambient;
+    } else {
+      categoryVolume = this.volumeSettings.notification;
+    }
+
+    return baseVolume * masterVolume * categoryVolume;
+  }
+
   fadeIn(soundName: keyof typeof this.sounds, duration: number = 500) {
     const sound = this.sounds[soundName];
-    if (sound) {
-      sound.fade(0, sound.volume(), duration);
+    if (sound && !this.isMuted) {
+      const targetVolume = this.getEffectiveVolume(soundName);
+      sound.volume(0);
+      sound.play();
+      sound.fade(0, targetVolume, duration);
     }
   }
 
@@ -699,6 +763,90 @@ class SoundService {
     } catch (error) {
       return false;
     }
+  }
+
+  /**
+   * 智能音效播放 - 根据计时器状态自动选择合适的音效
+   */
+  playSmartSound(phase: 'focus' | 'break' | 'microBreak' | 'forcedBreak', action: 'start' | 'end' = 'start'): void {
+    if (this.isMuted) return;
+
+    switch (phase) {
+      case 'focus':
+        if (action === 'start') {
+          this.play('focusStart');
+          // 0.5秒后开始播放白噪音
+          setTimeout(() => {
+            this.playWhiteNoiseWithFadeIn(500);
+          }, 500);
+        } else {
+          this.stopWhiteNoiseWithFadeOut(300);
+        }
+        break;
+
+      case 'break':
+      case 'forcedBreak':
+        if (action === 'start') {
+          this.stopWhiteNoiseWithFadeOut(200);
+          setTimeout(() => {
+            this.play('breakStart');
+          }, 200);
+        }
+        break;
+
+      case 'microBreak':
+        if (action === 'start') {
+          // 微休息时暂时降低白噪音音量而不停止
+          const whiteNoise = this.sounds.whiteNoise;
+          if (whiteNoise && whiteNoise.playing()) {
+            const currentVolume = whiteNoise.volume();
+            whiteNoise.fade(currentVolume, currentVolume * 0.3, 300);
+          }
+          this.play('microBreak');
+        } else {
+          // 微休息结束，恢复白噪音音量
+          const whiteNoise = this.sounds.whiteNoise;
+          if (whiteNoise && whiteNoise.playing()) {
+            const targetVolume = this.getEffectiveVolume('whiteNoise');
+            whiteNoise.fade(whiteNoise.volume(), targetVolume, 300);
+          }
+        }
+        break;
+    }
+  }
+
+  /**
+   * 获取音效播放状态
+   */
+  getSoundStatus(): {
+    whiteNoiseActive: boolean;
+    currentVolume: number;
+    isMuted: boolean;
+    activeSounds: string[];
+  } {
+    const activeSounds: string[] = [];
+
+    Object.entries(this.sounds).forEach(([name, sound]) => {
+      if (sound.playing()) {
+        activeSounds.push(name);
+      }
+    });
+
+    return {
+      whiteNoiseActive: this.sounds.whiteNoise?.playing() || false,
+      currentVolume: this.volumeSettings.master,
+      isMuted: this.isMuted,
+      activeSounds,
+    };
+  }
+
+  /**
+   * 紧急停止所有音效
+   */
+  emergencyStopAll(): void {
+    Object.values(this.sounds).forEach(sound => {
+      sound.stop();
+    });
   }
 
   /**

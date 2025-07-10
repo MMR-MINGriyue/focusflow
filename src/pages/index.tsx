@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import Timer from '../components/Timer/Timer';
+import React, { useState, useCallback, useEffect } from 'react';
+import UnifiedTimer from '../components/Timer/UnifiedTimer';
 import Stats from '../components/Stats/Stats';
 import DatabaseStats from '../components/Stats/DatabaseStats';
 import HealthCheck from '../components/HealthCheck';
@@ -10,7 +10,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/Tabs'
 import { Clock, BarChart3, Database } from 'lucide-react';
 import { appWindow } from '@tauri-apps/api/window';
 import { useKeyboardShortcuts, commonShortcuts } from '../hooks/useKeyboardShortcuts';
-import { useTimerStore } from '../stores/timerStore';
+import { useUnifiedTimerStore } from '../stores/unifiedTimerStore';
+import { useSystemTray } from '../hooks/useSystemTray';
+import { TimerMode } from '../types/unifiedTimer';
+import { useTheme } from '../hooks/useTheme';
 
 const Home: React.FC = () => {
   const [stats, setStats] = useState([
@@ -25,8 +28,34 @@ const Home: React.FC = () => {
   const [activeTab, setActiveTab] = useState('timer');
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
 
-  // 获取计时器控制函数
-  const { startTimer, pauseTimer, resetTimer, isActive } = useTimerStore();
+  // 初始化主题系统
+  const { theme, actualTheme } = useTheme();
+
+  // 获取统一计时器控制函数
+  const { start, pause, reset, switchMode, isActive } = useUnifiedTimerStore();
+
+  // 确保主题正确应用
+  useEffect(() => {
+    // 主题已经在useTheme hook中自动初始化
+    console.log('Current theme:', theme, 'Actual theme:', actualTheme);
+  }, [theme, actualTheme]);
+
+  // 系统托盘集成
+  const handleFocusMode = useCallback(() => {
+    setActiveTab('timer');
+    switchMode(TimerMode.SMART);
+    start();
+  }, [switchMode, start]);
+
+  const handleBreakMode = useCallback(() => {
+    setActiveTab('timer');
+    // 可以添加跳转到休息的逻辑
+  }, []);
+
+  useSystemTray({
+    onFocusMode: handleFocusMode,
+    onBreakMode: handleBreakMode,
+  });
 
   // 定义快捷键
   const shortcuts = [
@@ -34,20 +63,26 @@ const Home: React.FC = () => {
       ...commonShortcuts.SPACE,
       action: () => {
         if (isActive) {
-          pauseTimer();
+          pause();
         } else {
-          startTimer();
+          start();
         }
       },
     },
     {
       ...commonShortcuts.R,
-      action: () => resetTimer(),
+      action: () => reset(),
     },
     {
       ...commonShortcuts.T,
       action: () => setActiveTab('timer'),
       description: '切换到计时器标签',
+    },
+    {
+      key: 'I',
+      ctrlKey: true,
+      action: () => setActiveTab('smart-timer'),
+      description: '切换到智能计时器标签',
     },
     {
       ...commonShortcuts.STATS,
@@ -157,11 +192,12 @@ const Home: React.FC = () => {
             </div>
 
             <TabsContent value="timer" className="p-6">
-              <Timer
-                onStateChange={(state) => {
-                  updateTaskbarState(state);
-                  updateStats(state);
+              <UnifiedTimer
+                onStateChange={(state: string) => {
+                  updateTaskbarState(state as any);
+                  updateStats(state as any);
                 }}
+                className="max-w-4xl mx-auto"
               />
             </TabsContent>
 

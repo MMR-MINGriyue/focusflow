@@ -215,12 +215,15 @@ const BackgroundEffects: React.FC<BackgroundEffectsProps> = React.memo(({
     if (pattern === 'none') return null;
 
     const patternSize = size === 'small' ? 20 : size === 'medium' ? 40 : 60;
-    const patternId = `pattern-${pattern}-${Date.now()}`;
+    const patternId = `pattern-${pattern}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
     switch (pattern) {
       case 'dots':
         return (
-          <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ opacity }}>
+          <svg
+            className="absolute inset-0 w-full h-full pointer-events-none"
+            style={{ '--opacity': opacity, opacity: 'var(--opacity)' } as React.CSSProperties}
+          >
             <defs>
               <pattern id={patternId} x="0" y="0" width={patternSize} height={patternSize} patternUnits="userSpaceOnUse">
                 <circle cx={patternSize/2} cy={patternSize/2} r="2" fill={color} />

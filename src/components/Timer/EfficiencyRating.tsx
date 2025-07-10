@@ -1,20 +1,16 @@
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/Dialog';
 import { Button } from '../ui/Button';
-import { Rating } from '../ui/Rating';
 import { Textarea } from '../ui/Textarea';
-import { Badge } from '../ui/Badge';
 import { Clock, Target } from 'lucide-react';
 
 interface EfficiencyRatingProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (rating: EfficiencyRatingData) => void;
-  sessionData: {
-    duration: number; // 会话时长（分钟）
-    type: 'focus' | 'break' | 'microBreak';
-    interruptions?: number; // 中断次数
-  };
+  onSubmit: (score: number) => void;
+  duration: number; // 会话时长（分钟）
+  type: 'focus' | 'break' | 'microBreak' | 'forcedBreak';
+  interruptions?: number; // 中断次数
 }
 
 export interface EfficiencyRatingData {
@@ -30,58 +26,25 @@ const EfficiencyRating: React.FC<EfficiencyRatingProps> = ({
   isOpen,
   onClose,
   onSubmit,
-  sessionData,
+  duration,
+  type,
 }) => {
-  const [rating, setRating] = useState<EfficiencyRatingData>({
-    overallRating: 0,
-    focusLevel: 0,
-    energyLevel: 0,
-    satisfaction: 0,
-    notes: '',
-    tags: [],
-  });
-
-  const predefinedTags = [
-    '高效', '分心', '疲劳', '专注', '创造性', '学习',
-    '工作', '阅读', '编程', '写作', '思考', '规划'
-  ];
-
-  const handleRatingChange = (field: keyof EfficiencyRatingData, value: number) => {
-    setRating(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleNotesChange = (notes: string) => {
-    setRating(prev => ({ ...prev, notes }));
-  };
-
-  const toggleTag = (tag: string) => {
-    setRating(prev => ({
-      ...prev,
-      tags: prev.tags.includes(tag)
-        ? prev.tags.filter(t => t !== tag)
-        : [...prev.tags, tag]
-    }));
-  };
+  const [overallRating, setOverallRating] = useState<number>(0);
+  const [notes, setNotes] = useState<string>('');
 
   const handleSubmit = () => {
-    if (rating.overallRating === 0) {
+    if (overallRating === 0) {
       alert('请至少给出总体评分');
       return;
     }
-    onSubmit(rating);
+    onSubmit(overallRating);
     handleClose();
   };
 
   const handleClose = () => {
     // 重置表单
-    setRating({
-      overallRating: 0,
-      focusLevel: 0,
-      energyLevel: 0,
-      satisfaction: 0,
-      notes: '',
-      tags: [],
-    });
+    setOverallRating(0);
+    setNotes('');
     onClose();
   };
 
@@ -96,6 +59,7 @@ const EfficiencyRating: React.FC<EfficiencyRatingProps> = ({
       case 'focus': return '专注会话';
       case 'break': return '休息时间';
       case 'microBreak': return '微休息';
+      case 'forcedBreak': return '强制休息';
       default: return '会话';
     }
   };
@@ -112,16 +76,16 @@ const EfficiencyRating: React.FC<EfficiencyRatingProps> = ({
 
         <div className="space-y-6">
           {/* 会话信息 */}
-          <div className="bg-gray-50 p-4 rounded-lg">
+          <div className="bg-muted p-4 rounded-lg">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <Clock className="h-4 w-4 text-gray-500" />
-                <span className="text-sm text-gray-600">
-                  {getSessionTypeText(sessionData.type)}
+                <Clock className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">
+                  {getSessionTypeText(type)}
                 </span>
               </div>
               <span className="font-medium">
-                {formatDuration(sessionData.duration)}
+                {formatDuration(duration)}
               </span>
             </div>
           </div>
@@ -129,76 +93,40 @@ const EfficiencyRating: React.FC<EfficiencyRatingProps> = ({
           {/* 评分区域 */}
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                总体评分 *
+              <label className="block text-sm font-medium text-foreground mb-2">
+                效率评分 *
               </label>
-              <Rating
-                value={rating.overallRating}
-                onChange={(value) => handleRatingChange('overallRating', value)}
-                size="lg"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                专注程度
-              </label>
-              <Rating
-                value={rating.focusLevel}
-                onChange={(value) => handleRatingChange('focusLevel', value)}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                精力水平
-              </label>
-              <Rating
-                value={rating.energyLevel}
-                onChange={(value) => handleRatingChange('energyLevel', value)}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                满意度
-              </label>
-              <Rating
-                value={rating.satisfaction}
-                onChange={(value) => handleRatingChange('satisfaction', value)}
-              />
-            </div>
-          </div>
-
-          {/* 标签选择 */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              标签
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {predefinedTags.map((tag) => (
-                <Badge
-                  key={tag}
-                  variant={rating.tags.includes(tag) ? 'default' : 'outline'}
-                  className="cursor-pointer hover:bg-blue-100"
-                  onClick={() => toggleTag(tag)}
-                >
-                  {tag}
-                </Badge>
-              ))}
+              <div className="flex items-center space-x-2">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => setOverallRating(star)}
+                    className={`text-2xl transition-colors ${
+                      star <= overallRating ? 'text-yellow-400' : 'text-gray-300'
+                    }`}
+                  >
+                    ⭐
+                  </button>
+                ))}
+                <span className="ml-2 text-sm text-muted-foreground">
+                  {overallRating > 0 ? `${overallRating}/5` : '请评分'}
+                </span>
+              </div>
             </div>
           </div>
 
           {/* 备注 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-foreground mb-2">
               备注（可选）
             </label>
             <Textarea
-              value={rating.notes}
-              onChange={(e) => handleNotesChange(e.target.value)}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
               placeholder="记录这次会话的感受、遇到的问题或收获..."
               rows={3}
+              className="bg-background border-border"
             />
           </div>
         </div>

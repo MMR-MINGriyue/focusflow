@@ -170,8 +170,9 @@ const Timer: React.FC<TimerProps> = ({ onStateChange }) => {
       <EfficiencyRating
         isOpen={showRatingDialog}
         onClose={hideEfficiencyRating}
-        onSubmit={submitEfficiencyRating}
-        sessionData={pendingRatingSession || { duration: 0, type: 'focus' }}
+        onSubmit={(score: number) => submitEfficiencyRating({ overallRating: score } as any)}
+        duration={pendingRatingSession?.duration || 0}
+        type={pendingRatingSession?.type || 'focus'}
       />
       </div>
     </TooltipProvider>

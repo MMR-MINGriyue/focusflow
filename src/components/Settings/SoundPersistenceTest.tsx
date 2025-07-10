@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { CheckCircle, XCircle, AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { soundService } from '../../services/sound';
@@ -13,7 +13,7 @@ const SoundPersistenceTest: React.FC = () => {
   const [testResults, setTestResults] = useState<TestResult[]>([]);
   const [isRunning, setIsRunning] = useState(false);
 
-  const runTests = async () => {
+  const runTests = useCallback(async () => {
     setIsRunning(true);
     const results: TestResult[] = [];
 
@@ -129,7 +129,7 @@ const SoundPersistenceTest: React.FC = () => {
 
     setTestResults(results);
     setIsRunning(false);
-  };
+  }, []);
 
   useEffect(() => {
     // 组件加载时自动运行测试
@@ -174,8 +174,12 @@ const SoundPersistenceTest: React.FC = () => {
           disabled={isRunning}
           size="sm"
           className="flex items-center space-x-1"
+          aria-label={isRunning ? '正在运行音效持久化测试' : '重新运行音效持久化测试'}
         >
-          <RefreshCw className={`h-3 w-3 ${isRunning ? 'animate-spin' : ''}`} />
+          <RefreshCw
+            className={`h-3 w-3 ${isRunning ? 'animate-spin' : ''}`}
+            aria-hidden="true"
+          />
           <span>{isRunning ? '测试中...' : '重新测试'}</span>
         </Button>
       </div>
@@ -188,12 +192,22 @@ const SoundPersistenceTest: React.FC = () => {
             {passedTests}/{totalTests} 通过
           </span>
         </div>
-        <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
+        <div
+          className="mt-2 w-full bg-gray-200 rounded-full h-2"
+          role="progressbar"
+          {...{
+            'aria-valuenow': passedTests,
+            'aria-valuemin': 0,
+            'aria-valuemax': totalTests,
+            'aria-label': `测试进度：${passedTests}/${totalTests} 通过`
+          }}
+        >
           <div
             className="bg-green-500 h-2 rounded-full transition-all duration-300"
             style={{
-              width: totalTests > 0 ? `${(passedTests / totalTests) * 100}%` : '0%'
-            }}
+              '--progress-width': totalTests > 0 ? `${(passedTests / totalTests) * 100}%` : '0%',
+              width: 'var(--progress-width)'
+            } as React.CSSProperties}
           ></div>
         </div>
       </div>

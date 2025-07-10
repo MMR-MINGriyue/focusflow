@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Zap, Eye } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Switch } from '../ui/Switch';
@@ -14,6 +14,7 @@ const TimerAnimationSettings: React.FC<TimerAnimationSettingsProps> = ({ onSetti
   const [, setSettings] = useState<TimerStyleSettings>(timerStyleService.getSettings());
   const [currentStyle, setCurrentStyle] = useState<TimerStyleConfig>(timerStyleService.getCurrentStyle());
   const [previewAnimation, setPreviewAnimation] = useState<string | null>(null);
+  const previewTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const handleSettingsChange = (newSettings: TimerStyleSettings) => {
@@ -27,7 +28,7 @@ const TimerAnimationSettings: React.FC<TimerAnimationSettingsProps> = ({ onSetti
   }, [onSettingsChange]);
 
   // 更新动画设置
-  const updateAnimationSettings = (updates: Partial<TimerStyleConfig['animations']>) => {
+  const updateAnimationSettings = useCallback((updates: Partial<TimerStyleConfig['animations']>) => {
     const updatedStyle: TimerStyleConfig = {
       ...currentStyle,
       animations: {
@@ -39,17 +40,33 @@ const TimerAnimationSettings: React.FC<TimerAnimationSettingsProps> = ({ onSetti
 
     timerStyleService.addCustomStyle(updatedStyle);
     timerStyleService.setCurrentStyle(updatedStyle.id);
-  };
+  }, [currentStyle]);
 
   // 预览动画效果
-  const previewAnimationEffect = (animationType: string) => {
+  const previewAnimationEffect = useCallback((animationType: string) => {
+    // 清除之前的定时器
+    if (previewTimeoutRef.current) {
+      clearTimeout(previewTimeoutRef.current);
+      previewTimeoutRef.current = null;
+    }
+
     setPreviewAnimation(animationType);
-    
+
     // 3秒后自动停止预览
-    setTimeout(() => {
+    previewTimeoutRef.current = setTimeout(() => {
       setPreviewAnimation(null);
+      previewTimeoutRef.current = null;
     }, 3000);
-  };
+  }, []);
+
+  // 清理定时器
+  useEffect(() => {
+    return () => {
+      if (previewTimeoutRef.current) {
+        clearTimeout(previewTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // 动画效果列表
   const animationEffects = [
@@ -57,21 +74,21 @@ const TimerAnimationSettings: React.FC<TimerAnimationSettingsProps> = ({ onSetti
       id: 'pulse',
       name: '脉冲效果',
       description: '计时器会有规律地放大缩小',
-      property: 'pulseOnStateChange'
+      property: 'pulseOnStateChange' as keyof TimerStyleConfig['animations']
     },
     {
       id: 'breathing',
       name: '呼吸效果',
       description: '计时器会有呼吸般的明暗变化',
-      property: 'breathingEffect'
+      property: 'breathingEffect' as keyof TimerStyleConfig['animations']
     },
     {
       id: 'rotation',
       name: '旋转效果',
       description: '适用于模拟时钟样式的旋转动画',
-      property: 'rotationEffect'
+      property: 'rotationEffect' as keyof TimerStyleConfig['animations']
     }
-  ];
+  ] as const;
 
 
 
@@ -101,9 +118,9 @@ const TimerAnimationSettings: React.FC<TimerAnimationSettingsProps> = ({ onSetti
       {/* 当前样式信息 */}
       <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
         <div className="flex items-center space-x-3">
-          <div 
+          <div
             className="w-8 h-8 rounded-lg border-2 border-white shadow-sm flex items-center justify-center"
-            style={{ backgroundColor: currentStyle.colors.primary }}
+            style={{ '--bg-color': currentStyle.colors.primary, backgroundColor: 'var(--bg-color)' } as React.CSSProperties}
           >
             <Zap className="h-4 w-4 text-white" />
           </div>
@@ -163,8 +180,8 @@ const TimerAnimationSettings: React.FC<TimerAnimationSettingsProps> = ({ onSetti
                       <span>预览</span>
                     </Button>
                     <Switch
-                      checked={currentStyle.animations[effect.property as keyof typeof currentStyle.animations] as boolean}
-                      onCheckedChange={(checked) => 
+                      checked={currentStyle.animations[effect.property] as boolean}
+                      onCheckedChange={(checked) =>
                         updateAnimationSettings({ [effect.property]: checked })
                       }
                     />
@@ -206,6 +223,7 @@ const TimerAnimationSettings: React.FC<TimerAnimationSettingsProps> = ({ onSetti
                   value={currentStyle.animations.easing}
                   onChange={(e) => updateAnimationSettings({ easing: e.target.value })}
                   className="w-full p-2 border rounded text-sm"
+                  aria-label="选择动画缓动函数"
                 >
                   {easingOptions.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -221,7 +239,7 @@ const TimerAnimationSettings: React.FC<TimerAnimationSettingsProps> = ({ onSetti
           <div className="border rounded-lg p-4">
             <h4 className="font-medium text-gray-700 mb-4">动画预览</h4>
             <div className="flex items-center justify-center py-8 bg-gray-50 rounded-lg">
-              <div 
+              <div
                 className={`text-4xl font-bold transition-all ${
                   previewAnimation === 'pulse' ? 'timer-pulse' : ''
                 } ${
@@ -229,11 +247,14 @@ const TimerAnimationSettings: React.FC<TimerAnimationSettingsProps> = ({ onSetti
                 } ${
                   previewAnimation === 'rotation' ? 'timer-rotation' : ''
                 }`}
-                style={{ 
-                  color: currentStyle.colors.primary,
-                  transitionDuration: `${currentStyle.animations.transitionDuration}ms`,
-                  transitionTimingFunction: currentStyle.animations.easing
-                }}
+                style={{
+                  '--timer-color': currentStyle.colors.primary,
+                  '--timer-duration': `${currentStyle.animations.transitionDuration}ms`,
+                  '--timer-easing': currentStyle.animations.easing,
+                  color: 'var(--timer-color)',
+                  transitionDuration: 'var(--timer-duration)',
+                  transitionTimingFunction: 'var(--timer-easing)'
+                } as React.CSSProperties}
               >
                 25:00
               </div>

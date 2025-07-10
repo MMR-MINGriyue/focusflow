@@ -133,6 +133,16 @@ const TimerDisplay: React.FC<TimerDisplayProps> = React.memo(({
     }
   };
 
+  // 获取状态颜色
+  const getStateColor = () => {
+    switch (currentState) {
+      case 'focus': return currentStyle.colors.primary;
+      case 'break': return '#ef4444';
+      case 'microBreak': return '#f59e0b';
+      default: return currentStyle.colors.text;
+    }
+  };
+
   // 获取动画类名
   const getAnimationClasses = () => {
     if (!currentStyle.animations.enabled) return '';
@@ -164,7 +174,16 @@ const TimerDisplay: React.FC<TimerDisplayProps> = React.memo(({
       data-style={currentStyle.displayStyle}
       style={{
         '--timer-animation-duration': `${currentStyle.animations.transitionDuration}ms`,
-        '--timer-animation-easing': currentStyle.animations.easing
+        '--timer-animation-easing': currentStyle.animations.easing,
+        '--timer-state-color': getStateColor(),
+        '--timer-primary-color': currentStyle.colors.primary,
+        '--timer-secondary-color': currentStyle.colors.secondary,
+        '--timer-background-color': currentStyle.colors.background,
+        '--timer-text-color': currentStyle.colors.text,
+        '--timer-progress-bg': currentStyle.colors.progressBackground,
+        '--timer-font-size': currentStyle.fontSize || '3rem',
+        '--timer-font-weight': currentStyle.fontWeight || '600',
+        '--timer-font-family': currentStyle.fontFamily || 'inherit'
       } as React.CSSProperties}
     >
       {/* 背景效果层 */}
@@ -192,16 +211,7 @@ const DigitalDisplay: React.FC<{
   isActive: boolean;
   stateText: string;
   style: TimerStyleConfig;
-}> = ({ formattedTime, currentState, progress, isActive, stateText, style }) => {
-  const getStateColor = () => {
-    switch (currentState) {
-      case 'focus': return style.colors.primary;
-      case 'break': return '#ef4444';
-      case 'microBreak': return '#f59e0b';
-      default: return style.colors.text;
-    }
-  };
-
+}> = ({ formattedTime, currentState: _currentState, progress, isActive, stateText, style }) => {
   return (
     <div className="digital-timer-display flex flex-col items-center space-y-4">
       <div
@@ -209,34 +219,34 @@ const DigitalDisplay: React.FC<{
           style.animations.pulseOnStateChange && isActive ? 'timer-pulse' : ''
         } ${style.animations.breathingEffect ? 'timer-breathing' : ''}`}
         style={{
-          fontSize: style.fontSize || 'var(--timer-font-size)',
-          fontWeight: style.fontWeight || 'var(--timer-font-weight)',
-          fontFamily: style.fontFamily || 'var(--timer-font-family)',
-          color: getStateColor(),
-          textShadow: style.displayStyle === 'neon' ? `0 0 10px ${getStateColor()}` : 'none',
-          transitionDuration: style.animations.enabled ? `${style.animations.transitionDuration}ms` : '0ms'
-        }}
+          fontSize: 'var(--timer-font-size)',
+          fontWeight: 'var(--timer-font-weight)',
+          fontFamily: 'var(--timer-font-family)',
+          color: 'var(--timer-state-color)',
+          textShadow: style.displayStyle === 'neon' ? '0 0 10px var(--timer-state-color)' : 'none',
+          transitionDuration: style.animations.enabled ? 'var(--timer-animation-duration)' : '0ms'
+        } as React.CSSProperties}
       >
         {formattedTime}
       </div>
-      
+
       {style.layout.showStateText && (
-        <div 
+        <div
           className="timer-state-text text-lg font-medium"
-          style={{ color: style.colors.secondary }}
+          style={{ color: 'var(--timer-secondary-color)' } as React.CSSProperties}
         >
           {stateText}
         </div>
       )}
-      
+
       {style.layout.showStatusIndicator && (
         <div className="flex items-center space-x-2">
-          <div 
+          <div
             className={`w-3 h-3 rounded-full ${isActive ? 'animate-pulse' : ''}`}
-            style={{ backgroundColor: getStateColor() }}
+            style={{ backgroundColor: 'var(--timer-state-color)' } as React.CSSProperties}
           />
           {style.layout.showProgressPercentage && (
-            <span className="text-sm" style={{ color: style.colors.secondary }}>
+            <span className="text-sm" style={{ color: 'var(--timer-secondary-color)' } as React.CSSProperties}>
               {Math.round(progress)}% 完成
             </span>
           )}
@@ -254,21 +264,12 @@ const AnalogDisplay: React.FC<{
   isActive: boolean;
   stateText: string;
   style: TimerStyleConfig;
-}> = ({ time, currentState, progress, stateText, style }) => {
+}> = ({ time, currentState: _currentState, progress, stateText, style }) => {
   const radius = 80;
   const strokeWidth = 8;
   const circumference = 2 * Math.PI * radius;
   const strokeDasharray = circumference;
   const strokeDashoffset = circumference - (progress / 100) * circumference;
-
-  const getStateColor = () => {
-    switch (currentState) {
-      case 'focus': return style.colors.primary;
-      case 'break': return '#ef4444';
-      case 'microBreak': return '#f59e0b';
-      default: return style.colors.text;
-    }
-  };
 
   return (
     <div className="analog-timer-display flex flex-col items-center space-y-4">
@@ -279,7 +280,7 @@ const AnalogDisplay: React.FC<{
             cx="100"
             cy="100"
             r={radius}
-            stroke={style.colors.progressBackground}
+            stroke="var(--timer-progress-bg)"
             strokeWidth={strokeWidth}
             fill="transparent"
           />
@@ -288,7 +289,7 @@ const AnalogDisplay: React.FC<{
             cx="100"
             cy="100"
             r={radius}
-            stroke={getStateColor()}
+            stroke="var(--timer-state-color)"
             strokeWidth={strokeWidth}
             fill="transparent"
             strokeDasharray={strokeDasharray}
@@ -296,34 +297,34 @@ const AnalogDisplay: React.FC<{
             strokeLinecap="round"
             className={style.animations.enabled ? 'transition-all duration-500 ease-out' : ''}
             style={{
-              filter: style.displayStyle === 'neon' ? `drop-shadow(0 0 5px ${getStateColor()})` : 'none'
-            }}
+              filter: style.displayStyle === 'neon' ? 'drop-shadow(0 0 5px var(--timer-state-color))' : 'none'
+            } as React.CSSProperties}
           />
         </svg>
-        
+
         {/* 中心时间显示 */}
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <div 
+          <div
             className="text-2xl font-bold"
-            style={{ 
-              color: getStateColor(),
-              fontFamily: style.fontFamily || 'var(--timer-font-family)'
-            }}
+            style={{
+              color: 'var(--timer-state-color)',
+              fontFamily: 'var(--timer-font-family)'
+            } as React.CSSProperties}
           >
             {Math.floor(time / 60)}:{(time % 60).toString().padStart(2, '0')}
           </div>
           {style.layout.showProgressPercentage && (
-            <div className="text-sm" style={{ color: style.colors.secondary }}>
+            <div className="text-sm" style={{ color: 'var(--timer-secondary-color)' } as React.CSSProperties}>
               {Math.round(progress)}%
             </div>
           )}
         </div>
       </div>
-      
+
       {style.layout.showStateText && (
-        <div 
+        <div
           className="timer-state-text text-lg font-medium"
-          style={{ color: style.colors.secondary }}
+          style={{ color: 'var(--timer-secondary-color)' } as React.CSSProperties}
         >
           {stateText}
         </div>
@@ -340,16 +341,7 @@ const ProgressDisplay: React.FC<{
   isActive: boolean;
   stateText: string;
   style: TimerStyleConfig;
-}> = ({ formattedTime, currentState, progress, stateText, style }) => {
-  const getStateColor = () => {
-    switch (currentState) {
-      case 'focus': return style.colors.primary;
-      case 'break': return '#ef4444';
-      case 'microBreak': return '#f59e0b';
-      default: return style.colors.text;
-    }
-  };
-
+}> = ({ formattedTime, currentState: _currentState, progress, stateText, style }) => {
   return (
     <div className="progress-timer-display flex flex-col items-center space-y-6">
       <div className="relative w-48 h-48">
@@ -359,7 +351,7 @@ const ProgressDisplay: React.FC<{
             cx="50"
             cy="50"
             r="45"
-            stroke={style.colors.progressBackground}
+            stroke="var(--timer-progress-bg)"
             strokeWidth="4"
             fill="transparent"
           />
@@ -367,7 +359,7 @@ const ProgressDisplay: React.FC<{
             cx="50"
             cy="50"
             r="45"
-            stroke={getStateColor()}
+            stroke="var(--timer-state-color)"
             strokeWidth="4"
             fill="transparent"
             strokeDasharray={`${progress * 2.83} 283`}
@@ -376,34 +368,34 @@ const ProgressDisplay: React.FC<{
               style.animations.breathingEffect ? 'animate-pulse' : ''
             }`}
             style={{
-              filter: style.displayStyle === 'neon' ? `drop-shadow(0 0 3px ${getStateColor()})` : 'none'
-            }}
+              filter: style.displayStyle === 'neon' ? 'drop-shadow(0 0 3px var(--timer-state-color))' : 'none'
+            } as React.CSSProperties}
           />
         </svg>
-        
+
         {/* 中心内容 */}
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <div 
+          <div
             className="text-3xl font-bold mb-2"
-            style={{ 
-              color: getStateColor(),
-              fontFamily: style.fontFamily || 'var(--timer-font-family)'
-            }}
+            style={{
+              color: 'var(--timer-state-color)',
+              fontFamily: 'var(--timer-font-family)'
+            } as React.CSSProperties}
           >
             {formattedTime}
           </div>
           {style.layout.showProgressPercentage && (
-            <div className="text-lg" style={{ color: style.colors.secondary }}>
+            <div className="text-lg" style={{ color: 'var(--timer-secondary-color)' } as React.CSSProperties}>
               {Math.round(progress)}%
             </div>
           )}
         </div>
       </div>
-      
+
       {style.layout.showStateText && (
-        <div 
+        <div
           className="timer-state-text text-xl font-medium"
-          style={{ color: style.colors.secondary }}
+          style={{ color: 'var(--timer-secondary-color)' } as React.CSSProperties}
         >
           {stateText}
         </div>
@@ -420,45 +412,36 @@ const MinimalDisplay: React.FC<{
   isActive: boolean;
   stateText: string;
   style: TimerStyleConfig;
-}> = ({ formattedTime, currentState, progress, style }) => {
-  const getStateColor = () => {
-    switch (currentState) {
-      case 'focus': return style.colors.primary;
-      case 'break': return '#ef4444';
-      case 'microBreak': return '#f59e0b';
-      default: return style.colors.text;
-    }
-  };
-
+}> = ({ formattedTime, currentState: _currentState, progress, style }) => {
   return (
     <div className="minimal-timer-display flex flex-col items-center space-y-3">
-      <div 
+      <div
         className={`timer-time ${style.animations.enabled ? 'transition-all duration-300' : ''}`}
         style={{
-          fontSize: style.fontSize || 'var(--timer-font-size)',
+          fontSize: 'var(--timer-font-size)',
           fontWeight: '200',
-          fontFamily: style.fontFamily || 'var(--timer-font-family)',
-          color: getStateColor(),
+          fontFamily: 'var(--timer-font-family)',
+          color: 'var(--timer-state-color)',
           letterSpacing: '0.1em'
-        }}
+        } as React.CSSProperties}
       >
         {formattedTime}
       </div>
-      
+
       {style.progressStyle === 'linear' && (
         <div className="w-64 h-1 bg-gray-200 rounded-full overflow-hidden">
-          <div 
+          <div
             className={`h-full rounded-full ${style.animations.enabled ? 'transition-all duration-300' : ''}`}
-            style={{ 
+            style={{
               width: `${progress}%`,
-              backgroundColor: getStateColor()
-            }}
+              backgroundColor: 'var(--timer-state-color)'
+            } as React.CSSProperties}
           />
         </div>
       )}
-      
+
       {style.layout.showProgressPercentage && (
-        <div className="text-sm font-light" style={{ color: style.colors.secondary }}>
+        <div className="text-sm font-light" style={{ color: 'var(--timer-secondary-color)' } as React.CSSProperties}>
           {Math.round(progress)}%
         </div>
       )}
@@ -474,58 +457,49 @@ const CardDisplay: React.FC<{
   isActive: boolean;
   stateText: string;
   style: TimerStyleConfig;
-}> = ({ formattedTime, currentState, progress, stateText, style }) => {
-  const getStateColor = () => {
-    switch (currentState) {
-      case 'focus': return style.colors.primary;
-      case 'break': return '#ef4444';
-      case 'microBreak': return '#f59e0b';
-      default: return style.colors.text;
-    }
-  };
-
+}> = ({ formattedTime, currentState: _currentState, progress, stateText, style }) => {
   return (
-    <div 
+    <div
       className="card-timer-display p-8 rounded-2xl shadow-lg border"
-      style={{ 
-        backgroundColor: style.colors.background,
-        borderColor: style.colors.progressBackground
-      }}
+      style={{
+        backgroundColor: 'var(--timer-background-color)',
+        borderColor: 'var(--timer-progress-bg)'
+      } as React.CSSProperties}
     >
       <div className="flex flex-col items-center space-y-4">
         {style.layout.showStateText && (
-          <div 
+          <div
             className="text-sm font-medium uppercase tracking-wider"
-            style={{ color: style.colors.secondary }}
+            style={{ color: 'var(--timer-secondary-color)' } as React.CSSProperties}
           >
             {stateText}
           </div>
         )}
-        
-        <div 
+
+        <div
           className="timer-time"
           style={{
-            fontSize: style.fontSize || 'var(--timer-font-size)',
-            fontWeight: style.fontWeight || 'var(--timer-font-weight)',
-            fontFamily: style.fontFamily || 'var(--timer-font-family)',
-            color: getStateColor()
-          }}
+            fontSize: 'var(--timer-font-size)',
+            fontWeight: 'var(--timer-font-weight)',
+            fontFamily: 'var(--timer-font-family)',
+            color: 'var(--timer-state-color)'
+          } as React.CSSProperties}
         >
           {formattedTime}
         </div>
-        
+
         <div className="w-full bg-gray-200 rounded-full h-2">
-          <div 
+          <div
             className={`h-2 rounded-full ${style.animations.enabled ? 'transition-all duration-300' : ''}`}
-            style={{ 
+            style={{
               width: `${progress}%`,
-              backgroundColor: getStateColor()
-            }}
+              backgroundColor: 'var(--timer-state-color)'
+            } as React.CSSProperties}
           />
         </div>
-        
+
         {style.layout.showProgressPercentage && (
-          <div className="text-sm" style={{ color: style.colors.secondary }}>
+          <div className="text-sm" style={{ color: 'var(--timer-secondary-color)' } as React.CSSProperties}>
             {Math.round(progress)}% 完成
           </div>
         )}
@@ -543,7 +517,8 @@ const NeonDisplay: React.FC<{
   stateText: string;
   style: TimerStyleConfig;
 }> = ({ formattedTime, currentState, progress, stateText, style }) => {
-  const getStateColor = () => {
+  // 获取霓虹灯专用颜色
+  const getNeonColor = () => {
     switch (currentState) {
       case 'focus': return style.colors.primary;
       case 'break': return '#ff006e';
@@ -552,10 +527,15 @@ const NeonDisplay: React.FC<{
     }
   };
 
+  const neonColor = getNeonColor();
+
   return (
     <div
       className="neon-timer-display p-8 rounded-lg"
-      style={{ backgroundColor: style.colors.background }}
+      style={{
+        backgroundColor: 'var(--timer-background-color)',
+        '--neon-color': neonColor
+      } as React.CSSProperties}
     >
       <div className="flex flex-col items-center space-y-6">
         <div
@@ -563,18 +543,18 @@ const NeonDisplay: React.FC<{
             style.animations.breathingEffect ? 'animate-pulse' : ''
           }`}
           style={{
-            fontSize: style.fontSize || 'var(--timer-font-size)',
+            fontSize: 'var(--timer-font-size)',
             fontWeight: '700',
             fontFamily: '"Courier New", monospace',
-            color: getStateColor(),
+            color: neonColor,
             textShadow: `
-              0 0 5px ${getStateColor()},
-              0 0 10px ${getStateColor()},
-              0 0 15px ${getStateColor()},
-              0 0 20px ${getStateColor()}
+              0 0 5px ${neonColor},
+              0 0 10px ${neonColor},
+              0 0 15px ${neonColor},
+              0 0 20px ${neonColor}
             `,
-            filter: `brightness(1.2) contrast(1.1)`
-          }}
+            filter: 'brightness(1.2) contrast(1.1)'
+          } as React.CSSProperties}
         >
           {formattedTime}
         </div>
@@ -583,9 +563,9 @@ const NeonDisplay: React.FC<{
           <div
             className="text-lg font-medium uppercase tracking-widest"
             style={{
-              color: getStateColor(),
-              textShadow: `0 0 5px ${getStateColor()}`
-            }}
+              color: neonColor,
+              textShadow: `0 0 5px ${neonColor}`
+            } as React.CSSProperties}
           >
             {stateText}
           </div>
@@ -596,9 +576,9 @@ const NeonDisplay: React.FC<{
             className={`h-full rounded-full ${style.animations.enabled ? 'transition-all duration-300' : ''}`}
             style={{
               width: `${progress}%`,
-              backgroundColor: getStateColor(),
-              boxShadow: `0 0 10px ${getStateColor()}`
-            }}
+              backgroundColor: neonColor,
+              boxShadow: `0 0 10px ${neonColor}`
+            } as React.CSSProperties}
           />
         </div>
 
@@ -606,9 +586,9 @@ const NeonDisplay: React.FC<{
           <div
             className="text-sm font-mono"
             style={{
-              color: getStateColor(),
-              textShadow: `0 0 3px ${getStateColor()}`
-            }}
+              color: neonColor,
+              textShadow: `0 0 3px ${neonColor}`
+            } as React.CSSProperties}
           >
             {Math.round(progress).toString().padStart(3, '0')}%
           </div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Palette, Eye, Save, RotateCcw, Copy, Download } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { TimerStyleConfig, DEFAULT_TIMER_STYLES } from '../../types/timerStyle';
@@ -9,6 +9,12 @@ interface TimerStyleEditorProps {
   onStyleChange?: (style: TimerStyleConfig) => void;
 }
 
+interface NotificationState {
+  message: string;
+  type: 'success' | 'error' | 'info';
+  visible: boolean;
+}
+
 const TimerStyleEditor: React.FC<TimerStyleEditorProps> = ({ onStyleChange }) => {
   const [editingStyle, setEditingStyle] = useState<TimerStyleConfig | null>(null);
   const [originalStyle, setOriginalStyle] = useState<TimerStyleConfig | null>(null);
@@ -16,6 +22,19 @@ const TimerStyleEditor: React.FC<TimerStyleEditorProps> = ({ onStyleChange }) =>
   const [hasChanges, setHasChanges] = useState(false);
   const [styleName, setStyleName] = useState('');
   const [styleDescription, setStyleDescription] = useState('');
+  const [notification, setNotification] = useState<NotificationState>({
+    message: '',
+    type: 'info',
+    visible: false
+  });
+
+  // 显示通知
+  const showNotification = useCallback((message: string, type: NotificationState['type'] = 'info') => {
+    setNotification({ message, type, visible: true });
+    setTimeout(() => {
+      setNotification(prev => ({ ...prev, visible: false }));
+    }, 3000);
+  }, []);
 
   useEffect(() => {
     // 检查是否有变化
@@ -107,10 +126,10 @@ const TimerStyleEditor: React.FC<TimerStyleEditorProps> = ({ onStyleChange }) =>
       setOriginalStyle(finalStyle);
       setHasChanges(false);
       onStyleChange?.(finalStyle);
-      
-      alert('样式保存成功！');
+
+      showNotification('样式保存成功！', 'success');
     } else {
-      alert('保存样式失败，请重试。');
+      showNotification('保存样式失败，请重试。', 'error');
     }
   };
 
@@ -135,9 +154,9 @@ const TimerStyleEditor: React.FC<TimerStyleEditorProps> = ({ onStyleChange }) =>
 
     const config = JSON.stringify(editingStyle, null, 2);
     navigator.clipboard.writeText(config).then(() => {
-      alert('样式配置已复制到剪贴板！');
+      showNotification('样式配置已复制到剪贴板！', 'success');
     }).catch(() => {
-      alert('复制失败，请手动复制。');
+      showNotification('复制失败，请手动复制。', 'error');
     });
   };
 
@@ -229,7 +248,7 @@ const TimerStyleEditor: React.FC<TimerStyleEditorProps> = ({ onStyleChange }) =>
                 <div className="flex items-center space-x-3 mb-3">
                   <div
                     className="w-6 h-6 rounded-full border"
-                    style={{ backgroundColor: style.colors.primary }}
+                    style={{ '--bg-color': style.colors.primary, backgroundColor: 'var(--bg-color)' } as React.CSSProperties}
                   />
                   <div>
                     <div className="font-medium text-sm">{style.name}</div>
@@ -239,15 +258,15 @@ const TimerStyleEditor: React.FC<TimerStyleEditorProps> = ({ onStyleChange }) =>
                 <div className="flex space-x-1">
                   <div
                     className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: style.colors.primary }}
+                    style={{ '--bg-color': style.colors.primary, backgroundColor: 'var(--bg-color)' } as React.CSSProperties}
                   />
                   <div
                     className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: style.colors.accent }}
+                    style={{ '--bg-color': style.colors.accent, backgroundColor: 'var(--bg-color)' } as React.CSSProperties}
                   />
                   <div
                     className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: style.colors.progress }}
+                    style={{ '--bg-color': style.colors.progress, backgroundColor: 'var(--bg-color)' } as React.CSSProperties}
                   />
                 </div>
               </div>
@@ -298,8 +317,11 @@ const TimerStyleEditor: React.FC<TimerStyleEditorProps> = ({ onStyleChange }) =>
                 </label>
                 <select
                   value={editingStyle.displayStyle}
-                  onChange={(e) => updateStyle({ displayStyle: e.target.value as any })}
+                  onChange={(e) => updateStyle({
+                    displayStyle: e.target.value as TimerStyleConfig['displayStyle']
+                  })}
                   className="w-full p-2 border rounded text-sm"
+                  aria-label="选择显示样式"
                 >
                   <option value="digital">数字显示</option>
                   <option value="analog">模拟时钟</option>
@@ -315,8 +337,11 @@ const TimerStyleEditor: React.FC<TimerStyleEditorProps> = ({ onStyleChange }) =>
                 </label>
                 <select
                   value={editingStyle.size}
-                  onChange={(e) => updateStyle({ size: e.target.value as any })}
+                  onChange={(e) => updateStyle({
+                    size: e.target.value as TimerStyleConfig['size']
+                  })}
                   className="w-full p-2 border rounded text-sm"
+                  aria-label="选择计时器尺寸"
                 >
                   <option value="small">小</option>
                   <option value="medium">中</option>
@@ -330,8 +355,11 @@ const TimerStyleEditor: React.FC<TimerStyleEditorProps> = ({ onStyleChange }) =>
                 </label>
                 <select
                   value={editingStyle.numberStyle}
-                  onChange={(e) => updateStyle({ numberStyle: e.target.value as any })}
+                  onChange={(e) => updateStyle({
+                    numberStyle: e.target.value as TimerStyleConfig['numberStyle']
+                  })}
                   className="w-full p-2 border rounded text-sm"
+                  aria-label="选择数字样式"
                 >
                   <option value="standard">标准</option>
                   <option value="mono">等宽</option>
@@ -353,7 +381,7 @@ const TimerStyleEditor: React.FC<TimerStyleEditorProps> = ({ onStyleChange }) =>
                   <input
                     type="color"
                     value={colorValue.startsWith('#') ? colorValue : hslToHex(colorValue)}
-                    onChange={(e) => updateColor(colorKey as any, e.target.value)}
+                    onChange={(e) => updateColor(colorKey as keyof TimerStyleConfig['colors'], e.target.value)}
                     className="w-8 h-8 rounded border cursor-pointer"
                     title={`选择 ${colorKey} 颜色`}
                     aria-label={`选择 ${colorKey} 颜色`}
@@ -418,9 +446,13 @@ const TimerStyleEditor: React.FC<TimerStyleEditorProps> = ({ onStyleChange }) =>
                   <select
                     value={editingStyle.layout.alignment}
                     onChange={(e) => updateStyle({
-                      layout: { ...editingStyle.layout, alignment: e.target.value as any }
+                      layout: {
+                        ...editingStyle.layout,
+                        alignment: e.target.value as TimerStyleConfig['layout']['alignment']
+                      }
                     })}
                     className="w-full p-2 border rounded text-sm"
+                    aria-label="选择对齐方式"
                   >
                     <option value="left">左对齐</option>
                     <option value="center">居中</option>
@@ -485,6 +517,8 @@ const TimerStyleEditor: React.FC<TimerStyleEditorProps> = ({ onStyleChange }) =>
                     min="100"
                     max="2000"
                     step="100"
+                    aria-label="设置动画时长（毫秒）"
+                    title="设置动画时长（毫秒）"
                   />
                 </div>
               </div>
@@ -535,6 +569,17 @@ const TimerStyleEditor: React.FC<TimerStyleEditorProps> = ({ onStyleChange }) =>
           <li>可以导出样式配置文件与他人分享</li>
         </ul>
       </div>
+
+      {/* 通知组件 */}
+      {notification.visible && (
+        <div className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transition-all duration-300 ${
+          notification.type === 'success' ? 'bg-green-500 text-white' :
+          notification.type === 'error' ? 'bg-red-500 text-white' :
+          'bg-blue-500 text-white'
+        }`}>
+          {notification.message}
+        </div>
+      )}
     </div>
   );
 };

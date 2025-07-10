@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Palette, Eye, Save, RotateCcw, Copy, Download } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Theme, ThemeColors } from '../../types/theme';
@@ -7,6 +7,12 @@ import { hslToHex, hexToHsl } from '../../utils/colorUtils';
 
 interface ThemeEditorProps {
   onThemeChange?: (theme: Theme) => void;
+}
+
+interface NotificationState {
+  message: string;
+  type: 'success' | 'error' | 'info';
+  visible: boolean;
 }
 
 interface ColorGroup {
@@ -22,6 +28,11 @@ const ThemeEditor: React.FC<ThemeEditorProps> = ({ onThemeChange }) => {
   const [hasChanges, setHasChanges] = useState(false);
   const [themeName, setThemeName] = useState('');
   const [themeDescription, setThemeDescription] = useState('');
+  const [notification, setNotification] = useState<NotificationState>({
+    message: '',
+    type: 'info',
+    visible: false
+  });
 
   // 颜色分组配置
   const colorGroups: ColorGroup[] = [
@@ -56,6 +67,14 @@ const ThemeEditor: React.FC<ThemeEditorProps> = ({ onThemeChange }) => {
       colors: ['progressBackground', 'progressForeground']
     }
   ];
+
+  // 显示通知
+  const showNotification = useCallback((message: string, type: NotificationState['type'] = 'info') => {
+    setNotification({ message, type, visible: true });
+    setTimeout(() => {
+      setNotification(prev => ({ ...prev, visible: false }));
+    }, 3000);
+  }, []);
 
   useEffect(() => {
     // 检查是否有变化
@@ -186,11 +205,11 @@ const ThemeEditor: React.FC<ThemeEditorProps> = ({ onThemeChange }) => {
       setOriginalTheme(finalTheme);
       setHasChanges(false);
       onThemeChange?.(finalTheme);
-      
-      alert('主题保存成功！');
+
+      showNotification('主题保存成功！', 'success');
     } catch (error) {
       console.error('Failed to save theme:', error);
-      alert('保存主题失败，请重试。');
+      showNotification('保存主题失败，请重试。', 'error');
     }
   };
 
@@ -214,9 +233,9 @@ const ThemeEditor: React.FC<ThemeEditorProps> = ({ onThemeChange }) => {
 
     const config = JSON.stringify(editingTheme, null, 2);
     navigator.clipboard.writeText(config).then(() => {
-      alert('主题配置已复制到剪贴板！');
+      showNotification('主题配置已复制到剪贴板！', 'success');
     }).catch(() => {
-      alert('复制失败，请手动复制。');
+      showNotification('复制失败，请手动复制。', 'error');
     });
   };
 
@@ -308,7 +327,7 @@ const ThemeEditor: React.FC<ThemeEditorProps> = ({ onThemeChange }) => {
                 <div className="flex items-center space-x-3 mb-3">
                   <div
                     className="w-6 h-6 rounded-full border"
-                    style={{ backgroundColor: theme.colors.primary }}
+                    style={{ '--bg-color': theme.colors.primary, backgroundColor: 'var(--bg-color)' } as React.CSSProperties}
                   />
                   <div>
                     <div className="font-medium text-sm">{theme.name}</div>
@@ -318,15 +337,15 @@ const ThemeEditor: React.FC<ThemeEditorProps> = ({ onThemeChange }) => {
                 <div className="flex space-x-1">
                   <div
                     className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: theme.colors.focus }}
+                    style={{ '--bg-color': theme.colors.focus, backgroundColor: 'var(--bg-color)' } as React.CSSProperties}
                   />
                   <div
                     className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: theme.colors.break }}
+                    style={{ '--bg-color': theme.colors.break, backgroundColor: 'var(--bg-color)' } as React.CSSProperties}
                   />
                   <div
                     className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: theme.colors.microBreak }}
+                    style={{ '--bg-color': theme.colors.microBreak, backgroundColor: 'var(--bg-color)' } as React.CSSProperties}
                   />
                 </div>
               </div>
@@ -445,6 +464,17 @@ const ThemeEditor: React.FC<ThemeEditorProps> = ({ onThemeChange }) => {
           <li>可以导出主题配置文件与他人分享</li>
         </ul>
       </div>
+
+      {/* 通知组件 */}
+      {notification.visible && (
+        <div className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transition-all duration-300 ${
+          notification.type === 'success' ? 'bg-green-500 text-white' :
+          notification.type === 'error' ? 'bg-red-500 text-white' :
+          'bg-blue-500 text-white'
+        }`}>
+          {notification.message}
+        </div>
+      )}
     </div>
   );
 };

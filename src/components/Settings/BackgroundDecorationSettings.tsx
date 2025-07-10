@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Sparkles, Eye, RotateCcw } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Switch } from '../ui/Switch';
@@ -10,12 +10,13 @@ interface BackgroundDecorationSettingsProps {
   onSettingsChange?: (settings: TimerStyleSettings) => void;
 }
 
-const BackgroundDecorationSettings: React.FC<BackgroundDecorationSettingsProps> = ({ 
-  onSettingsChange 
+const BackgroundDecorationSettings: React.FC<BackgroundDecorationSettingsProps> = ({
+  onSettingsChange
 }) => {
   const [, setSettings] = useState<TimerStyleSettings>(timerStyleService.getSettings());
   const [currentStyle, setCurrentStyle] = useState<TimerStyleConfig>(timerStyleService.getCurrentStyle());
   const [previewEffect, setPreviewEffect] = useState<string | null>(null);
+  const previewTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const handleSettingsChange = (newSettings: TimerStyleSettings) => {
@@ -29,7 +30,7 @@ const BackgroundDecorationSettings: React.FC<BackgroundDecorationSettingsProps> 
   }, [onSettingsChange]);
 
   // 更新背景设置
-  const updateBackgroundSettings = (updates: Partial<TimerStyleConfig['background']>) => {
+  const updateBackgroundSettings = useCallback((updates: Partial<TimerStyleConfig['background']>) => {
     const updatedStyle: TimerStyleConfig = {
       ...currentStyle,
       background: {
@@ -41,10 +42,10 @@ const BackgroundDecorationSettings: React.FC<BackgroundDecorationSettingsProps> 
 
     timerStyleService.addCustomStyle(updatedStyle);
     timerStyleService.setCurrentStyle(updatedStyle.id);
-  };
+  }, [currentStyle]);
 
   // 更新粒子设置
-  const updateParticleSettings = (updates: Partial<TimerStyleConfig['particles']>) => {
+  const updateParticleSettings = useCallback((updates: Partial<TimerStyleConfig['particles']>) => {
     const updatedStyle: TimerStyleConfig = {
       ...currentStyle,
       particles: {
@@ -56,10 +57,10 @@ const BackgroundDecorationSettings: React.FC<BackgroundDecorationSettingsProps> 
 
     timerStyleService.addCustomStyle(updatedStyle);
     timerStyleService.setCurrentStyle(updatedStyle.id);
-  };
+  }, [currentStyle]);
 
   // 更新装饰设置
-  const updateDecorationSettings = (updates: Partial<TimerStyleConfig['decoration']>) => {
+  const updateDecorationSettings = useCallback((updates: Partial<TimerStyleConfig['decoration']>) => {
     const updatedStyle: TimerStyleConfig = {
       ...currentStyle,
       decoration: {
@@ -71,18 +72,36 @@ const BackgroundDecorationSettings: React.FC<BackgroundDecorationSettingsProps> 
 
     timerStyleService.addCustomStyle(updatedStyle);
     timerStyleService.setCurrentStyle(updatedStyle.id);
-  };
+  }, [currentStyle]);
 
   // 预览效果
-  const previewEffectToggle = (effectType: string) => {
+  const previewEffectToggle = useCallback((effectType: string) => {
+    // 清除之前的定时器
+    if (previewTimeoutRef.current) {
+      clearTimeout(previewTimeoutRef.current);
+      previewTimeoutRef.current = null;
+    }
+
     if (previewEffect === effectType) {
       setPreviewEffect(null);
     } else {
       setPreviewEffect(effectType);
       // 3秒后自动停止预览
-      setTimeout(() => setPreviewEffect(null), 3000);
+      previewTimeoutRef.current = setTimeout(() => {
+        setPreviewEffect(null);
+        previewTimeoutRef.current = null;
+      }, 3000);
     }
-  };
+  }, [previewEffect]);
+
+  // 清理定时器
+  useEffect(() => {
+    return () => {
+      if (previewTimeoutRef.current) {
+        clearTimeout(previewTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // 背景图案选项
   const backgroundPatterns = [
@@ -132,9 +151,9 @@ const BackgroundDecorationSettings: React.FC<BackgroundDecorationSettingsProps> 
       {/* 当前样式信息 */}
       <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
         <div className="flex items-center space-x-3">
-          <div 
+          <div
             className="w-8 h-8 rounded-lg border-2 border-white shadow-sm flex items-center justify-center"
-            style={{ backgroundColor: currentStyle.colors.primary }}
+            style={{ '--bg-color': currentStyle.colors.primary, backgroundColor: 'var(--bg-color)' } as React.CSSProperties}
           >
             <Sparkles className="h-4 w-4 text-white" />
           </div>
@@ -161,8 +180,11 @@ const BackgroundDecorationSettings: React.FC<BackgroundDecorationSettingsProps> 
             </label>
             <select
               value={currentStyle.background.pattern}
-              onChange={(e) => updateBackgroundSettings({ pattern: e.target.value as any })}
+              onChange={(e) => updateBackgroundSettings({
+                pattern: e.target.value as TimerStyleConfig['background']['pattern']
+              })}
               className="w-full p-2 border rounded text-sm"
+              aria-label="选择背景图案类型"
             >
               {backgroundPatterns.map((pattern) => (
                 <option key={pattern.value} value={pattern.value}>
@@ -194,8 +216,11 @@ const BackgroundDecorationSettings: React.FC<BackgroundDecorationSettingsProps> 
                 </label>
                 <select
                   value={currentStyle.background.size}
-                  onChange={(e) => updateBackgroundSettings({ size: e.target.value as any })}
+                  onChange={(e) => updateBackgroundSettings({
+                    size: e.target.value as TimerStyleConfig['background']['size']
+                  })}
                   className="w-full p-2 border rounded text-sm"
+                  aria-label="选择背景图案尺寸"
                 >
                   <option value="small">小</option>
                   <option value="medium">中</option>
@@ -212,6 +237,8 @@ const BackgroundDecorationSettings: React.FC<BackgroundDecorationSettingsProps> 
                   value={currentStyle.background.color}
                   onChange={(e) => updateBackgroundSettings({ color: e.target.value })}
                   className="w-full h-10 border rounded cursor-pointer"
+                  aria-label="选择背景图案颜色"
+                  title="选择背景图案颜色"
                 />
               </div>
 
@@ -237,8 +264,11 @@ const BackgroundDecorationSettings: React.FC<BackgroundDecorationSettingsProps> 
             </label>
             <select
               value={currentStyle.particles.effect}
-              onChange={(e) => updateParticleSettings({ effect: e.target.value as any })}
+              onChange={(e) => updateParticleSettings({
+                effect: e.target.value as TimerStyleConfig['particles']['effect']
+              })}
               className="w-full p-2 border rounded text-sm"
+              aria-label="选择粒子效果类型"
             >
               {particleEffects.map((effect) => (
                 <option key={effect.value} value={effect.value}>
@@ -315,6 +345,8 @@ const BackgroundDecorationSettings: React.FC<BackgroundDecorationSettingsProps> 
                   value={currentStyle.particles.color}
                   onChange={(e) => updateParticleSettings({ color: e.target.value })}
                   className="w-full h-10 border rounded cursor-pointer"
+                  aria-label="选择粒子颜色"
+                  title="选择粒子颜色"
                 />
               </div>
             </>
@@ -332,8 +364,11 @@ const BackgroundDecorationSettings: React.FC<BackgroundDecorationSettingsProps> 
             </label>
             <select
               value={currentStyle.decoration.element}
-              onChange={(e) => updateDecorationSettings({ element: e.target.value as any })}
+              onChange={(e) => updateDecorationSettings({
+                element: e.target.value as TimerStyleConfig['decoration']['element']
+              })}
               className="w-full p-2 border rounded text-sm"
+              aria-label="选择装饰元素类型"
             >
               {decorationElements.map((element) => (
                 <option key={element.value} value={element.value}>
@@ -368,6 +403,8 @@ const BackgroundDecorationSettings: React.FC<BackgroundDecorationSettingsProps> 
                   value={currentStyle.decoration.color}
                   onChange={(e) => updateDecorationSettings({ color: e.target.value })}
                   className="w-full h-10 border rounded cursor-pointer"
+                  aria-label="选择装饰颜色"
+                  title="选择装饰颜色"
                 />
               </div>
 

@@ -103,9 +103,12 @@ const TimerStyleSelector: React.FC<TimerStyleSelectorProps> = ({ onStyleChange }
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div 
+            <div
               className="w-8 h-8 rounded-lg border-2 border-white shadow-sm flex items-center justify-center"
-              style={{ backgroundColor: settings.currentStyleId ? timerStyleService.getCurrentStyle().colors.primary : '#3b82f6' }}
+              style={{
+                '--bg-color': settings.currentStyleId ? timerStyleService.getCurrentStyle().colors.primary : '#3b82f6',
+                backgroundColor: 'var(--bg-color)'
+              } as React.CSSProperties}
             >
               <Monitor className="h-4 w-4 text-white" />
             </div>
@@ -128,6 +131,7 @@ const TimerStyleSelector: React.FC<TimerStyleSelectorProps> = ({ onStyleChange }
         {categories.map((category) => (
           <button
             key={category.id}
+            type="button"
             onClick={() => setSelectedCategory(category.id)}
             className={`px-3 py-1.5 text-sm rounded-full border transition-colors ${
               selectedCategory === category.id

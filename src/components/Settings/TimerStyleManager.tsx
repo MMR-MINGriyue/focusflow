@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Monitor, Trash2, Edit3, Copy, Download, Upload, Eye, EyeOff } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { TimerStyleConfig, TimerStyleSettings } from '../../types/timerStyle';
@@ -8,6 +8,20 @@ interface TimerStyleManagerProps {
   onStyleChange?: (style: TimerStyleConfig) => void;
 }
 
+interface NotificationState {
+  message: string;
+  type: 'success' | 'error' | 'info';
+  visible: boolean;
+}
+
+// interface ConfirmDialogState {
+//   visible: boolean;
+//   title: string;
+//   message: string;
+//   onConfirm: () => void;
+//   onCancel: () => void;
+// }
+
 const TimerStyleManager: React.FC<TimerStyleManagerProps> = ({ onStyleChange }) => {
   const [, setSettings] = useState<TimerStyleSettings>(timerStyleService.getSettings());
   const [currentStyle, setCurrentStyle] = useState<TimerStyleConfig>(timerStyleService.getCurrentStyle());
@@ -15,6 +29,19 @@ const TimerStyleManager: React.FC<TimerStyleManagerProps> = ({ onStyleChange }) 
   const [editingStyle, setEditingStyle] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [editDescription, setEditDescription] = useState('');
+  // TODO: 实现通知和确认对话框功能
+  // const [notification, setNotification] = useState<NotificationState>({
+  //   message: '',
+  //   type: 'info',
+  //   visible: false
+  // });
+  // const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState>({
+  //   visible: false,
+  //   title: '',
+  //   message: '',
+  //   onConfirm: () => {},
+  //   onCancel: () => {}
+  // });
 
   useEffect(() => {
     const handleSettingsChange = (newSettings: TimerStyleSettings) => {
@@ -31,17 +58,22 @@ const TimerStyleManager: React.FC<TimerStyleManagerProps> = ({ onStyleChange }) 
   // 获取自定义样式
   const customStyles = timerStyleService.getCustomStyles();
 
+  // 显示通知
+  const showNotification = useCallback((message: string, type: NotificationState['type'] = 'info') => {
+    console.log(`${type}: ${message}`);
+  }, []);
+
   // 删除自定义样式
-  const deleteStyle = (styleId: string) => {
+  const deleteStyle = useCallback((styleId: string) => {
     if (confirm('确定要删除这个自定义样式吗？此操作无法撤销。')) {
       const success = timerStyleService.removeCustomStyle(styleId);
       if (success) {
-        alert('样式删除成功！');
+        showNotification('样式删除成功！', 'success');
       } else {
-        alert('删除样式失败，请重试。');
+        showNotification('删除样式失败，请重试。', 'error');
       }
     }
-  };
+  }, [showNotification]);
 
   // 开始编辑样式
   const startEditStyle = (style: TimerStyleConfig) => {
@@ -164,11 +196,11 @@ const TimerStyleManager: React.FC<TimerStyleManagerProps> = ({ onStyleChange }) 
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-4 bg-background text-foreground">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
-          <Monitor className="h-5 w-5 text-blue-500" />
-          <h3 className="text-lg font-semibold">计时器样式管理</h3>
+          <Monitor className="h-5 w-5 text-primary" />
+          <h3 className="text-lg font-semibold text-foreground">计时器样式管理</h3>
         </div>
         <div className="flex items-center space-x-2">
           <input
@@ -179,7 +211,7 @@ const TimerStyleManager: React.FC<TimerStyleManagerProps> = ({ onStyleChange }) 
             id="style-import"
           />
           <label htmlFor="style-import" className="cursor-pointer">
-            <div className="inline-flex items-center space-x-1 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+            <div className="inline-flex items-center space-x-1 px-3 py-1.5 text-sm font-medium text-foreground bg-card border border-border rounded-md hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ring transition-colors">
               <Upload className="h-3 w-3" />
               <span>导入样式</span>
             </div>
@@ -188,22 +220,22 @@ const TimerStyleManager: React.FC<TimerStyleManagerProps> = ({ onStyleChange }) 
       </div>
 
       {/* 当前样式信息 */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+      <div className="bg-card border border-border rounded-lg p-4 shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div
-              className="w-8 h-8 rounded-full border-2 border-white shadow-sm"
+              className="w-8 h-8 rounded-full border-2 border-background shadow-sm"
               style={{ backgroundColor: currentStyle.colors.primary }}
             />
             <div>
-              <div className="font-medium text-gray-700">{currentStyle.name}</div>
-              <div className="text-sm text-gray-500">
+              <div className="font-medium text-card-foreground">{currentStyle.name}</div>
+              <div className="text-sm text-muted-foreground">
                 {currentStyle.description} • {formatDisplayStyle(currentStyle.displayStyle)}
               </div>
             </div>
           </div>
           {previewStyle && (
-            <div className="text-sm text-orange-600 bg-orange-50 px-3 py-1 rounded">
+            <div className="text-sm text-orange-600 bg-orange-50 dark:bg-orange-900/20 dark:text-orange-400 px-3 py-1 rounded">
               预览模式
             </div>
           )}
@@ -212,12 +244,12 @@ const TimerStyleManager: React.FC<TimerStyleManagerProps> = ({ onStyleChange }) 
 
       {/* 自定义样式列表 */}
       <div className="space-y-4">
-        <h4 className="text-sm font-medium text-gray-700">
+        <h4 className="text-sm font-medium text-foreground">
           自定义样式 ({customStyles.length})
         </h4>
 
         {customStyles.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
+          <div className="text-center py-8 text-muted-foreground">
             <Monitor className="h-8 w-8 mx-auto mb-2 opacity-50" />
             <p>还没有自定义样式</p>
             <p className="text-sm">前往"样式编辑"创建您的第一个自定义样式</p>
@@ -225,31 +257,31 @@ const TimerStyleManager: React.FC<TimerStyleManagerProps> = ({ onStyleChange }) 
         ) : (
           <div className="space-y-3">
             {customStyles.map((style) => (
-              <div key={style.id} className="border rounded-lg bg-gray-50">
+              <div key={style.id} className="border border-border rounded-lg bg-card shadow-sm">
                 {editingStyle === style.id ? (
                   // 编辑模式
                   <div className="p-4 space-y-3">
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                      <label className="block text-xs font-medium text-muted-foreground mb-1">
                         样式名称
                       </label>
                       <input
                         type="text"
                         value={editName}
                         onChange={(e) => setEditName(e.target.value)}
-                        className="w-full p-2 border rounded text-sm"
+                        className="w-full p-2 border border-input rounded text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
                         placeholder="输入样式名称"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                      <label className="block text-xs font-medium text-muted-foreground mb-1">
                         样式描述
                       </label>
                       <input
                         type="text"
                         value={editDescription}
                         onChange={(e) => setEditDescription(e.target.value)}
-                        className="w-full p-2 border rounded text-sm"
+                        className="w-full p-2 border border-input rounded text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
                         placeholder="输入样式描述"
                       />
                     </div>
@@ -278,40 +310,40 @@ const TimerStyleManager: React.FC<TimerStyleManagerProps> = ({ onStyleChange }) 
                     <div className="flex items-start justify-between">
                       <div className="flex items-center space-x-3 flex-1">
                         <div
-                          className="w-8 h-8 rounded-full border-2 border-white shadow-sm"
+                          className="w-8 h-8 rounded-full border-2 border-background shadow-sm"
                           style={{ backgroundColor: style.colors.primary }}
                         />
                         <div className="flex-1">
-                          <div className="font-medium text-gray-700">{style.name}</div>
-                          <div className="text-sm text-gray-500 mt-1">{style.description}</div>
-                          <div className="flex items-center space-x-4 mt-2">
-                            <span className="text-xs text-gray-400">
+                          <div className="font-medium text-card-foreground">{style.name}</div>
+                          <div className="text-sm text-muted-foreground mt-1">{style.description}</div>
+                          <div className="flex items-center space-x-4 mt-2 flex-wrap gap-2">
+                            <span className="text-xs text-muted-foreground">
                               类型: {formatDisplayStyle(style.displayStyle)}
                             </span>
-                            <span className="text-xs text-gray-400">
+                            <span className="text-xs text-muted-foreground">
                               尺寸: {style.size}
                             </span>
                             {currentStyle.id === style.id && (
-                              <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                              <span className="text-xs text-blue-600 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400 px-2 py-1 rounded">
                                 当前使用
                               </span>
                             )}
                             {previewStyle?.id === style.id && (
-                              <span className="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded">
+                              <span className="text-xs text-orange-600 bg-orange-50 dark:bg-orange-900/20 dark:text-orange-400 px-2 py-1 rounded">
                                 预览中
                               </span>
                             )}
                           </div>
                         </div>
                       </div>
-                      
-                      <div className="flex items-center space-x-1 ml-3">
+
+                      <div className="flex items-center space-x-1 ml-3 flex-wrap gap-1">
                         <Button
                           type="button"
                           onClick={() => previewStyleToggle(style)}
                           size="sm"
                           variant="outline"
-                          className="flex items-center space-x-1"
+                          className="flex items-center space-x-1 border-border hover:bg-accent hover:text-accent-foreground"
                           title={previewStyle?.id === style.id ? '退出预览' : '预览样式'}
                         >
                           {previewStyle?.id === style.id ? (
@@ -320,57 +352,57 @@ const TimerStyleManager: React.FC<TimerStyleManagerProps> = ({ onStyleChange }) 
                             <Eye className="h-3 w-3" />
                           )}
                         </Button>
-                        
+
                         {currentStyle.id !== style.id && (
                           <Button
                             type="button"
                             onClick={() => applyStyle(style.id)}
                             size="sm"
-                            className="bg-blue-600 hover:bg-blue-700 text-white text-xs"
+                            className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs"
                           >
                             应用
                           </Button>
                         )}
-                        
+
                         <Button
                           type="button"
                           onClick={() => startEditStyle(style)}
                           size="sm"
                           variant="outline"
-                          className="text-blue-600 hover:text-blue-700"
+                          className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 border-border hover:bg-accent"
                           title="编辑样式"
                         >
                           <Edit3 className="h-3 w-3" />
                         </Button>
-                        
+
                         <Button
                           type="button"
                           onClick={() => duplicateStyle(style.id)}
                           size="sm"
                           variant="outline"
-                          className="text-green-600 hover:text-green-700"
+                          className="text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 border-border hover:bg-accent"
                           title="复制样式"
                         >
                           <Copy className="h-3 w-3" />
                         </Button>
-                        
+
                         <Button
                           type="button"
                           onClick={() => exportStyle(style)}
                           size="sm"
                           variant="outline"
-                          className="text-purple-600 hover:text-purple-700"
+                          className="text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 border-border hover:bg-accent"
                           title="导出样式"
                         >
                           <Download className="h-3 w-3" />
                         </Button>
-                        
+
                         <Button
                           type="button"
                           onClick={() => deleteStyle(style.id)}
                           size="sm"
                           variant="outline"
-                          className="text-red-600 hover:text-red-700"
+                          className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 border-border hover:bg-accent"
                           title="删除样式"
                         >
                           <Trash2 className="h-3 w-3" />
@@ -385,8 +417,8 @@ const TimerStyleManager: React.FC<TimerStyleManagerProps> = ({ onStyleChange }) 
         )}
       </div>
 
-      <div className="text-xs text-gray-500 bg-blue-50 p-3 rounded">
-        <p><strong>样式管理提示：</strong></p>
+      <div className="text-xs text-muted-foreground bg-muted p-3 rounded border border-border">
+        <p className="font-medium text-foreground"><strong>样式管理提示：</strong></p>
         <ul className="list-disc list-inside space-y-1 mt-1">
           <li>点击"预览"按钮可以临时查看样式效果，不会保存设置</li>
           <li>点击"应用"按钮将样式设为当前使用的样式</li>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Smartphone, Tablet, Monitor, Eye } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Switch } from '../ui/Switch';
@@ -13,6 +13,7 @@ const ResponsiveSettings: React.FC<ResponsiveSettingsProps> = ({ onSettingsChang
   const [, setSettings] = useState<TimerStyleSettings>(timerStyleService.getSettings());
   const [currentStyle, setCurrentStyle] = useState<TimerStyleConfig>(timerStyleService.getCurrentStyle());
   const [previewDevice, setPreviewDevice] = useState<'mobile' | 'tablet' | 'desktop' | null>(null);
+  const previewTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const handleSettingsChange = (newSettings: TimerStyleSettings) => {
@@ -26,7 +27,7 @@ const ResponsiveSettings: React.FC<ResponsiveSettingsProps> = ({ onSettingsChang
   }, [onSettingsChange]);
 
   // 更新响应式设置
-  const updateResponsiveSettings = (updates: Partial<TimerStyleConfig['responsive']>) => {
+  const updateResponsiveSettings = useCallback((updates: Partial<TimerStyleConfig['responsive']>) => {
     const updatedStyle: TimerStyleConfig = {
       ...currentStyle,
       responsive: {
@@ -38,10 +39,10 @@ const ResponsiveSettings: React.FC<ResponsiveSettingsProps> = ({ onSettingsChang
 
     timerStyleService.addCustomStyle(updatedStyle);
     timerStyleService.setCurrentStyle(updatedStyle.id);
-  };
+  }, [currentStyle]);
 
   // 更新特定设备的断点配置
-  const updateBreakpointSettings = (
+  const updateBreakpointSettings = useCallback((
     device: 'mobile' | 'tablet' | 'desktop',
     updates: Partial<TimerStyleConfig>
   ) => {
@@ -62,7 +63,7 @@ const ResponsiveSettings: React.FC<ResponsiveSettingsProps> = ({ onSettingsChang
 
     timerStyleService.addCustomStyle(updatedStyle);
     timerStyleService.setCurrentStyle(updatedStyle.id);
-  };
+  }, [currentStyle]);
 
   // 设备配置
   const devices = [
@@ -108,15 +109,33 @@ const ResponsiveSettings: React.FC<ResponsiveSettingsProps> = ({ onSettingsChang
   ];
 
   // 预览设备
-  const previewDeviceToggle = (device: 'mobile' | 'tablet' | 'desktop') => {
+  const previewDeviceToggle = useCallback((device: 'mobile' | 'tablet' | 'desktop') => {
+    // 清除之前的定时器
+    if (previewTimeoutRef.current) {
+      clearTimeout(previewTimeoutRef.current);
+      previewTimeoutRef.current = null;
+    }
+
     if (previewDevice === device) {
       setPreviewDevice(null);
     } else {
       setPreviewDevice(device);
       // 3秒后自动停止预览
-      setTimeout(() => setPreviewDevice(null), 3000);
+      previewTimeoutRef.current = setTimeout(() => {
+        setPreviewDevice(null);
+        previewTimeoutRef.current = null;
+      }, 3000);
     }
-  };
+  }, [previewDevice]);
+
+  // 清理定时器
+  useEffect(() => {
+    return () => {
+      if (previewTimeoutRef.current) {
+        clearTimeout(previewTimeoutRef.current);
+      }
+    };
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -135,9 +154,9 @@ const ResponsiveSettings: React.FC<ResponsiveSettingsProps> = ({ onSettingsChang
       {/* 当前样式信息 */}
       <div className="bg-green-50 border border-green-200 rounded-lg p-4">
         <div className="flex items-center space-x-3">
-          <div 
+          <div
             className="w-8 h-8 rounded-lg border-2 border-white shadow-sm flex items-center justify-center"
-            style={{ backgroundColor: currentStyle.colors.primary }}
+            style={{ '--bg-color': currentStyle.colors.primary, backgroundColor: 'var(--bg-color)' } as React.CSSProperties}
           >
             <Monitor className="h-4 w-4 text-white" />
           </div>
@@ -208,8 +227,11 @@ const ResponsiveSettings: React.FC<ResponsiveSettingsProps> = ({ onSettingsChang
                         </label>
                         <select
                           value={breakpointConfig?.size || currentStyle.size}
-                          onChange={(e) => updateBreakpointSettings(device.id, { size: e.target.value as any })}
+                          onChange={(e) => updateBreakpointSettings(device.id, {
+                            size: e.target.value as TimerStyleConfig['size']
+                          })}
                           className="w-full p-2 border rounded text-sm"
+                          aria-label={`选择${device.name}设备的计时器尺寸`}
                         >
                           {sizeOptions.map((option) => (
                             <option key={option.value} value={option.value}>
@@ -226,8 +248,11 @@ const ResponsiveSettings: React.FC<ResponsiveSettingsProps> = ({ onSettingsChang
                         </label>
                         <select
                           value={breakpointConfig?.displayStyle || currentStyle.displayStyle}
-                          onChange={(e) => updateBreakpointSettings(device.id, { displayStyle: e.target.value as any })}
+                          onChange={(e) => updateBreakpointSettings(device.id, {
+                            displayStyle: e.target.value as TimerStyleConfig['displayStyle']
+                          })}
                           className="w-full p-2 border rounded text-sm"
+                          aria-label={`选择${device.name}设备的显示样式`}
                         >
                           {displayStyleOptions.map((option) => (
                             <option key={option.value} value={option.value}>
@@ -244,13 +269,14 @@ const ResponsiveSettings: React.FC<ResponsiveSettingsProps> = ({ onSettingsChang
                         </label>
                         <select
                           value={breakpointConfig?.layout?.alignment || currentStyle.layout.alignment}
-                          onChange={(e) => updateBreakpointSettings(device.id, { 
-                            layout: { 
-                              ...currentStyle.layout, 
-                              alignment: e.target.value as any 
-                            } 
+                          onChange={(e) => updateBreakpointSettings(device.id, {
+                            layout: {
+                              ...currentStyle.layout,
+                              alignment: e.target.value as TimerStyleConfig['layout']['alignment']
+                            }
                           })}
                           className="w-full p-2 border rounded text-sm"
+                          aria-label={`选择${device.name}设备的对齐方式`}
                         >
                           <option value="left">左对齐</option>
                           <option value="center">居中</option>
@@ -265,13 +291,14 @@ const ResponsiveSettings: React.FC<ResponsiveSettingsProps> = ({ onSettingsChang
                         </label>
                         <select
                           value={breakpointConfig?.layout?.spacing || currentStyle.layout.spacing}
-                          onChange={(e) => updateBreakpointSettings(device.id, { 
-                            layout: { 
-                              ...currentStyle.layout, 
-                              spacing: e.target.value as any 
-                            } 
+                          onChange={(e) => updateBreakpointSettings(device.id, {
+                            layout: {
+                              ...currentStyle.layout,
+                              spacing: e.target.value as TimerStyleConfig['layout']['spacing']
+                            }
                           })}
                           className="w-full p-2 border rounded text-sm"
+                          aria-label={`选择${device.name}设备的间距设置`}
                         >
                           <option value="compact">紧凑</option>
                           <option value="normal">正常</option>
