@@ -119,13 +119,20 @@ const Home: React.FC = () => {
 
   // 更新任务栏图标颜色
   const updateTaskbarState = async (state: 'focus' | 'break' | 'microBreak') => {
-    try {
-      const stateText = state === 'focus' ? '专注中' :
-                       state === 'break' ? '休息中' : '微休息中';
-      await appWindow.setTitle(`FocusFlow - ${stateText}`);
-    } catch (error) {
-      console.error('Failed to update taskbar:', error);
-    }
+    // 导入环境检测工具
+    const { safeTauriCall } = await import('../utils/environment');
+
+    const stateText = state === 'focus' ? '专注中' :
+                     state === 'break' ? '休息中' : '微休息中';
+
+    await safeTauriCall(
+      () => appWindow.setTitle(`FocusFlow - ${stateText}`),
+      undefined,
+      {
+        silent: true, // 静默失败，避免重复错误日志
+        logPrefix: 'Update taskbar'
+      }
+    );
   };
 
   // 更新统计数据

@@ -82,9 +82,16 @@ describe('TimerStyleEditor - Notification System', () => {
     updatedAt: new Date().toISOString(),
   };
 
+  beforeAll(() => {
+    jest.useFakeTimers('legacy');
+  });
+
+  afterAll(() => {
+    jest.useRealTimers();
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
-    jest.useFakeTimers();
     mockTimerStyleService.getSettings.mockReturnValue({
       currentStyleId: 'test-style',
       customStyles: [mockCurrentStyle],
@@ -99,6 +106,23 @@ describe('TimerStyleEditor - Notification System', () => {
     jest.useRealTimers();
   });
 
+  // Helper function to enter editing mode
+  const enterEditingMode = async (user: any) => {
+    // Find the style card by looking for the clickable div that contains "现代数字"
+    const styleCards = screen.getAllByRole('generic');
+    const modernDigitalCard = styleCards.find(card =>
+      card.textContent?.includes('现代数字') &&
+      card.className.includes('cursor-pointer')
+    );
+    expect(modernDigitalCard).toBeTruthy();
+    await user.click(modernDigitalCard!);
+
+    // Wait for editing mode to be active
+    await waitFor(() => {
+      expect(screen.getByText('保存样式')).toBeInTheDocument();
+    });
+  };
+
   it('renders without crashing', () => {
     render(<TimerStyleEditor onStyleChange={mockOnStyleChange} />);
     expect(screen.getByText('计时器样式编辑器')).toBeInTheDocument();
@@ -109,12 +133,15 @@ describe('TimerStyleEditor - Notification System', () => {
     const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
     
     render(<TimerStyleEditor onStyleChange={mockOnStyleChange} />);
-    
+
+    // Enter editing mode first
+    await enterEditingMode(user);
+
     // Make a change to trigger save
-    const nameInput = screen.getByDisplayValue('Test Style');
+    const nameInput = screen.getByDisplayValue('Test Style (副本)');
     await user.clear(nameInput);
     await user.type(nameInput, 'New Style Name');
-    
+
     const saveButton = screen.getByText('保存样式');
     await user.click(saveButton);
     
@@ -133,12 +160,15 @@ describe('TimerStyleEditor - Notification System', () => {
     const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
     
     render(<TimerStyleEditor onStyleChange={mockOnStyleChange} />);
-    
+
+    // Enter editing mode first
+    await enterEditingMode(user);
+
     // Make a change to trigger save
-    const nameInput = screen.getByDisplayValue('Test Style');
+    const nameInput = screen.getByDisplayValue('Test Style (副本)');
     await user.clear(nameInput);
     await user.type(nameInput, 'New Style Name');
-    
+
     const saveButton = screen.getByText('保存样式');
     await user.click(saveButton);
     
@@ -261,35 +291,56 @@ describe('TimerStyleEditor - Notification System', () => {
     expect(cancelButton).toHaveAttribute('type', 'button');
   });
 
-  it('cleans up notification timeout on unmount', () => {
+  it('cleans up notification timeout on unmount', async () => {
+    const user = userEvent.setup();
     const { unmount } = render(<TimerStyleEditor onStyleChange={mockOnStyleChange} />);
-    
-    // Trigger a notification
+
+    // First select a base style to enter editing mode by clicking the style card
+    const styleCards = screen.getAllByRole('generic');
+    const modernDigitalCard = styleCards.find(card =>
+      card.textContent?.includes('现代数字') &&
+      card.className.includes('cursor-pointer')
+    );
+    expect(modernDigitalCard).toBeTruthy();
+    await user.click(modernDigitalCard!);
+
+    // Now find and trigger a notification
     const saveButton = screen.getByText('保存样式');
     fireEvent.click(saveButton);
-    
+
     // Unmount component
     unmount();
-    
+
     // Fast-forward time to ensure timeout would have fired
     jest.advanceTimersByTime(5000);
-    
+
     // No errors should occur (timeout should be cleaned up)
   });
 
   it('handles multiple rapid notifications correctly', async () => {
     const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-    
+
     render(<TimerStyleEditor onStyleChange={mockOnStyleChange} />);
-    
+
+    // First select a base style to enter editing mode by clicking the style card
+    const styleCards = screen.getAllByRole('generic');
+    const modernDigitalCard = styleCards.find(card =>
+      card.textContent?.includes('现代数字') &&
+      card.className.includes('cursor-pointer')
+    );
+    expect(modernDigitalCard).toBeTruthy();
+    await user.click(modernDigitalCard!);
+
     // Trigger multiple notifications rapidly
     const saveButton = screen.getByText('保存样式');
     await user.click(saveButton);
     await user.click(saveButton);
     await user.click(saveButton);
-    
+
     // Should only show one notification at a time
-    const notifications = screen.getAllByText('样式保存成功！');
-    expect(notifications).toHaveLength(1);
+    await waitFor(() => {
+      const notifications = screen.getAllByText('样式保存成功！');
+      expect(notifications).toHaveLength(1);
+    });
   });
 });

@@ -1,0 +1,63 @@
+{
+  "id": "test-custom-style",
+  "name": "测试自定义样式",
+  "description": "用于测试TimerStyleManager功能的自定义样式",
+  "displayStyle": "digital",
+  "size": "large",
+  "numberStyle": "standard",
+  "progressStyle": "linear",
+  "colors": {
+    "primary": "#ff6b6b",
+    "secondary": "#4ecdc4",
+    "background": "#ffffff",
+    "text": "#2c3e50",
+    "accent": "#f39c12",
+    "progress": "#e74c3c",
+    "progressBackground": "#ecf0f1"
+  },
+  "layout": {
+    "alignment": "center",
+    "spacing": "normal",
+    "showStatusIndicator": true,
+    "showProgressPercentage": true,
+    "showStateText": true
+  },
+  "animations": {
+    "enabled": true,
+    "transitionDuration": 300,
+    "easing": "ease-in-out",
+    "pulseOnStateChange": true,
+    "breathingEffect": false,
+    "rotationEffect": false
+  },
+  "effects": {
+    "shadow": {
+      "enabled": true,
+      "blur": 10,
+      "spread": 2,
+      "color": "#000000",
+      "opacity": 0.1
+    },
+    "glow": {
+      "enabled": false,
+      "color": "#ff6b6b",
+      "intensity": 0.5
+    },
+    "blur": {
+      "enabled": false,
+      "intensity": 2
+    }
+  },
+  "responsive": {
+    "enabled": true,
+    "breakpoints": {
+      "mobile": { "size": "medium" },
+      "tablet": { "size": "large" },
+      "desktop": { "size": "extra-large" }
+    }
+  },
+  "isPreset": false,
+  "category": "modern",
+  "createdAt": "2025-01-11T00:00:00.000Z",
+  "updatedAt": "2025-01-11T00:00:00.000Z"
+}

@@ -20,23 +20,57 @@ const BackgroundEffects: React.FC<BackgroundEffectsProps> = React.memo(({
   // 性能配置
   const performanceConfig = useMemo(() => getAdaptivePerformanceConfig(), []);
 
-  // 优化后的样式配置
-  const optimizedStyle = useMemo(() => ({
-    ...style,
-    particles: {
-      ...style.particles,
-      count: Math.min(style.particles.count, performanceConfig.particleCount),
-      effect: performanceConfig.enableBackgroundEffects ? style.particles.effect : 'none'
-    },
-    background: {
-      ...style.background,
-      pattern: performanceConfig.enableBackgroundEffects ? style.background.pattern : 'none'
-    },
-    decoration: {
-      ...style.decoration,
-      element: performanceConfig.enableComplexDecorations ? style.decoration.element : 'none'
-    }
-  }), [style, performanceConfig]);
+  // 默认配置
+  const defaultParticles = {
+    effect: 'none' as const,
+    count: 0,
+    size: 2,
+    speed: 1,
+    color: '#ffffff',
+    opacity: 0.5
+  };
+
+  const defaultBackground = {
+    pattern: 'none' as const,
+    opacity: 0.1,
+    color: '#000000',
+    size: 'medium' as const,
+    animation: false
+  };
+
+  const defaultDecoration = {
+    element: 'none' as const,
+    intensity: 0.5,
+    color: '#000000',
+    animated: false
+  };
+
+  // 优化后的样式配置（添加安全检查和默认值）
+  const optimizedStyle = useMemo(() => {
+    const safeParticles = style.particles || defaultParticles;
+    const safeBackground = style.background || defaultBackground;
+    const safeDecoration = style.decoration || defaultDecoration;
+
+    return {
+      ...style,
+      particles: {
+        ...defaultParticles,
+        ...safeParticles,
+        count: Math.min(safeParticles.count || 0, performanceConfig.particleCount),
+        effect: performanceConfig.enableBackgroundEffects ? (safeParticles.effect || 'none') : 'none'
+      },
+      background: {
+        ...defaultBackground,
+        ...safeBackground,
+        pattern: performanceConfig.enableBackgroundEffects ? (safeBackground.pattern || 'none') : 'none'
+      },
+      decoration: {
+        ...defaultDecoration,
+        ...safeDecoration,
+        element: performanceConfig.enableComplexDecorations ? (safeDecoration.element || 'none') : 'none'
+      }
+    };
+  }, [style, performanceConfig]);
 
   // 粒子类定义
   class Particle {

@@ -29,19 +29,14 @@ const TimerStyleManager: React.FC<TimerStyleManagerProps> = ({ onStyleChange }) 
   const [editingStyle, setEditingStyle] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [editDescription, setEditDescription] = useState('');
-  // TODO: 实现通知和确认对话框功能
-  // const [notification, setNotification] = useState<NotificationState>({
-  //   message: '',
-  //   type: 'info',
-  //   visible: false
-  // });
-  // const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState>({
-  //   visible: false,
-  //   title: '',
-  //   message: '',
-  //   onConfirm: () => {},
-  //   onCancel: () => {}
-  // });
+  const [notification, setNotification] = useState<NotificationState>({
+    message: '',
+    type: 'info',
+    visible: false
+  });
+  const [isConfirmDialogVisible, setIsConfirmDialogVisible] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<() => void>(() => {});
+  const [confirmMessage, setConfirmMessage] = useState('');
 
   useEffect(() => {
     const handleSettingsChange = (newSettings: TimerStyleSettings) => {
@@ -60,20 +55,44 @@ const TimerStyleManager: React.FC<TimerStyleManagerProps> = ({ onStyleChange }) 
 
   // 显示通知
   const showNotification = useCallback((message: string, type: NotificationState['type'] = 'info') => {
-    console.log(`${type}: ${message}`);
+    setNotification({ message, type, visible: true });
+    setTimeout(() => {
+      setNotification(prev => ({ ...prev, visible: false }));
+    }, 3000);
+  }, []);
+
+  // 显示确认对话框
+  const showConfirmDialog = useCallback((message: string, onConfirm: () => void) => {
+    setConfirmMessage(message);
+    setConfirmAction(() => onConfirm);
+    setIsConfirmDialogVisible(true);
+  }, []);
+
+  // 处理确认对话框
+  const handleConfirm = useCallback(() => {
+    confirmAction();
+    setIsConfirmDialogVisible(false);
+    setConfirmAction(() => {});
+    setConfirmMessage('');
+  }, [confirmAction]);
+
+  const handleCancel = useCallback(() => {
+    setIsConfirmDialogVisible(false);
+    setConfirmAction(() => {});
+    setConfirmMessage('');
   }, []);
 
   // 删除自定义样式
   const deleteStyle = useCallback((styleId: string) => {
-    if (confirm('确定要删除这个自定义样式吗？此操作无法撤销。')) {
+    showConfirmDialog('确定要删除这个自定义样式吗？此操作无法撤销。', () => {
       const success = timerStyleService.removeCustomStyle(styleId);
       if (success) {
         showNotification('样式删除成功！', 'success');
       } else {
         showNotification('删除样式失败，请重试。', 'error');
       }
-    }
-  }, [showNotification]);
+    });
+  }, [showNotification, showConfirmDialog]);
 
   // 开始编辑样式
   const startEditStyle = (style: TimerStyleConfig) => {
@@ -428,6 +447,51 @@ const TimerStyleManager: React.FC<TimerStyleManagerProps> = ({ onStyleChange }) 
           <li>删除样式操作无法撤销，请谨慎操作</li>
         </ul>
       </div>
+
+      {/* 通知组件 */}
+      {notification.visible && (
+        <div className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg border max-w-sm ${
+          notification.type === 'success' ? 'bg-green-50 border-green-200 text-green-800' :
+          notification.type === 'error' ? 'bg-red-50 border-red-200 text-red-800' :
+          'bg-blue-50 border-blue-200 text-blue-800'
+        }`}>
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium">{notification.message}</span>
+            <button
+              type="button"
+              onClick={() => setNotification(prev => ({ ...prev, visible: false }))}
+              className="ml-2 text-gray-400 hover:text-gray-600"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 确认对话框 */}
+      {isConfirmDialogVisible && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">确认操作</h3>
+            <p className="text-gray-600 mb-6">{confirmMessage}</p>
+            <div className="flex justify-end space-x-3">
+              <Button
+                variant="outline"
+                onClick={handleCancel}
+                className="px-4 py-2"
+              >
+                取消
+              </Button>
+              <Button
+                onClick={handleConfirm}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white"
+              >
+                确认
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,8 +1,8 @@
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { TimerStyleConfig } from '../../types/timerStyle';
 import { timerStyleService } from '../../services/timerStyle';
 import BackgroundEffects from './BackgroundEffects';
-import { usePerformanceMonitor, getAdaptivePerformanceConfig } from '../../utils/performance';
+import { usePerformanceMonitor, getAdaptivePerformanceConfig, throttle } from '../../utils/performance';
 
 // 响应式断点
 const BREAKPOINTS = {
@@ -46,72 +46,133 @@ const TimerDisplay: React.FC<TimerDisplayProps> = React.memo(({
     return 'desktop';
   };
 
-  // 获取响应式样式配置（使用useCallback优化）
-  const getResponsiveStyle = useCallback((baseStyle: TimerStyleConfig): TimerStyleConfig => {
-    if (!baseStyle.responsive.enabled) return baseStyle;
+  // 缓存默认配置（避免每次重新创建）
+  const defaultConfigs = useMemo(() => ({
+    particles: {
+      effect: 'none' as const,
+      count: 0,
+      size: 2,
+      speed: 1,
+      color: '#ffffff',
+      opacity: 0.5
+    },
+    background: {
+      pattern: 'none' as const,
+      opacity: 0.1,
+      color: '#000000',
+      size: 'medium' as const,
+      animation: false
+    }
+  }), []);
 
-    const breakpointConfig = baseStyle.responsive.breakpoints[screenSize];
-    if (!breakpointConfig) return baseStyle;
+  // 优化的响应式样式计算（减少计算复杂度）
+  const responsiveStyle = useMemo(() => {
+    const baseStyle = timerStyleService.getStyleForState(currentState);
 
-    // 合并基础样式和断点配置，并应用性能优化
-    const optimizedStyle = {
+    // 快速路径：如果不需要响应式，直接返回
+    if (!baseStyle.responsive?.enabled) {
+      return baseStyle;
+    }
+
+    const breakpointConfig = baseStyle.responsive.breakpoints?.[screenSize];
+    if (!breakpointConfig) {
+      return baseStyle;
+    }
+
+    // 只合并必要的属性，避免深度合并
+    const safeParticles = baseStyle.particles || defaultConfigs.particles;
+    const safeBackground = baseStyle.background || defaultConfigs.background;
+
+    // 使用浅合并，提高性能
+    return {
       ...baseStyle,
       ...breakpointConfig,
-      layout: {
-        ...baseStyle.layout,
-        ...breakpointConfig.layout
-      },
+      layout: breakpointConfig.layout ? { ...baseStyle.layout, ...breakpointConfig.layout } : baseStyle.layout,
       animations: {
         ...baseStyle.animations,
-        ...breakpointConfig.animations,
-        // 在低性能设备上禁用动画
+        ...(breakpointConfig.animations || {}),
         enabled: baseStyle.animations.enabled && performanceConfig.enableAnimations
       },
       particles: {
-        ...baseStyle.particles,
-        // 在低性能设备上减少粒子数量
-        count: Math.min(baseStyle.particles.count, performanceConfig.particleCount)
+        ...safeParticles,
+        count: Math.min(safeParticles.count || 0, performanceConfig.particleCount)
       },
       background: {
-        ...baseStyle.background,
-        // 在低性能设备上禁用背景效果
-        pattern: performanceConfig.enableBackgroundEffects ? baseStyle.background.pattern : 'none'
+        ...safeBackground,
+        pattern: performanceConfig.enableBackgroundEffects ? (safeBackground.pattern || 'none') : 'none'
       }
     };
+  }, [currentState, screenSize, performanceConfig, defaultConfigs]);
 
-    return optimizedStyle;
-  }, [screenSize, performanceConfig]);
-
+  // 优化的样式更新逻辑（使用浅比较，避免JSON.stringify）
   useEffect(() => {
-    const handleStyleChange = () => {
-      recordUpdate(); // 记录组件更新
-
-      // 根据状态获取样式
-      const style = timerStyleService.getStyleForState(currentState);
-      const responsiveStyle = getResponsiveStyle(style);
+    // 使用引用比较，更高效
+    if (currentStyle !== responsiveStyle) {
       setCurrentStyle(responsiveStyle);
-    };
+      recordUpdate(); // 记录组件更新
+    }
+  }, [responsiveStyle, currentStyle, recordUpdate]);
 
-    const handleResize = () => {
-      const newScreenSize = getScreenSize();
-      if (newScreenSize !== screenSize) {
-        setScreenSize(newScreenSize);
-        handleStyleChange();
+  // 优化的resize监听器（使用节流和防抖）
+  useEffect(() => {
+    let resizeTimeout: NodeJS.Timeout;
+
+    const handleResize = throttle(() => {
+      // 清除之前的超时
+      if (resizeTimeout) {
+        clearTimeout(resizeTimeout);
       }
+
+      // 延迟执行，避免频繁更新
+      resizeTimeout = setTimeout(() => {
+        const newScreenSize = getScreenSize();
+        if (newScreenSize !== screenSize) {
+          setScreenSize(newScreenSize);
+        }
+      }, 50);
+    }, 200); // 200ms节流
+
+    window.addEventListener('resize', handleResize);
+
+    // 初始化屏幕尺寸（只执行一次）
+    if (screenSize === 'desktop') {
+      setScreenSize(getScreenSize());
+    }
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      if (resizeTimeout) {
+        clearTimeout(resizeTimeout);
+      }
+    };
+  }, []); // 移除screenSize依赖，避免循环
+
+  // 样式服务监听器（独立的effect，使用防抖）
+  useEffect(() => {
+    let styleChangeTimeout: NodeJS.Timeout;
+
+    const handleStyleChange = () => {
+      // 清除之前的超时
+      if (styleChangeTimeout) {
+        clearTimeout(styleChangeTimeout);
+      }
+
+      // 延迟执行，避免频繁更新
+      styleChangeTimeout = setTimeout(() => {
+        // 强制重新计算样式
+        const newStyle = timerStyleService.getStyleForState(currentState);
+        setCurrentStyle(newStyle);
+      }, 100);
     };
 
     timerStyleService.addListener(handleStyleChange);
-    window.addEventListener('resize', handleResize);
-
-    // 初始化
-    setScreenSize(getScreenSize());
-    handleStyleChange();
-
     return () => {
       timerStyleService.removeListener(handleStyleChange);
-      window.removeEventListener('resize', handleResize);
+      if (styleChangeTimeout) {
+        clearTimeout(styleChangeTimeout);
+      }
     };
-  }, [currentState, screenSize, getResponsiveStyle, recordUpdate]);
+  }, [currentState]);
 
   // 根据样式类型渲染不同的显示组件
   const renderDisplay = () => {
@@ -133,18 +194,18 @@ const TimerDisplay: React.FC<TimerDisplayProps> = React.memo(({
     }
   };
 
-  // 获取状态颜色
-  const getStateColor = () => {
+  // 缓存状态颜色计算（避免每次渲染重新计算）
+  const stateColor = useMemo(() => {
     switch (currentState) {
       case 'focus': return currentStyle.colors.primary;
       case 'break': return '#ef4444';
       case 'microBreak': return '#f59e0b';
       default: return currentStyle.colors.text;
     }
-  };
+  }, [currentState, currentStyle.colors]);
 
-  // 获取动画类名
-  const getAnimationClasses = () => {
+  // 缓存动画类名计算（避免每次渲染重新计算）
+  const animationClasses = useMemo(() => {
     if (!currentStyle.animations.enabled) return '';
 
     const classes = [];
@@ -166,16 +227,16 @@ const TimerDisplay: React.FC<TimerDisplayProps> = React.memo(({
     }
 
     return classes.join(' ');
-  };
+  }, [currentStyle.animations, currentStyle.displayStyle, isActive]);
 
   return (
     <div
-      className={`timer-display-container relative ${className} ${getAnimationClasses()}`}
+      className={`timer-display-container relative ${className} ${animationClasses}`}
       data-style={currentStyle.displayStyle}
       style={{
         '--timer-animation-duration': `${currentStyle.animations.transitionDuration}ms`,
         '--timer-animation-easing': currentStyle.animations.easing,
-        '--timer-state-color': getStateColor(),
+        '--timer-state-color': stateColor,
         '--timer-primary-color': currentStyle.colors.primary,
         '--timer-secondary-color': currentStyle.colors.secondary,
         '--timer-background-color': currentStyle.colors.background,

@@ -2,6 +2,10 @@
   preset: "ts-jest",
   testEnvironment: "jsdom",
   setupFilesAfterEnv: ["<rootDir>/src/tests/setup.ts"],
+  fakeTimers: {
+    enableGlobally: false,
+    legacyFakeTimers: true
+  },
   moduleNameMapper: {
     "^@/(.*)$": "<rootDir>/src/$1",
     "\\.(css|less|scss|sass)$": "identity-obj-proxy",

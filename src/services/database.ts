@@ -1,5 +1,6 @@
 import Database from '@tauri-apps/plugin-sql';
 import { logError } from '../utils/errorHandler';
+import { isTauriEnvironment } from '../utils/environment';
 
 export interface FocusSession {
   id?: number;
@@ -47,6 +48,14 @@ class DatabaseService {
   }
 
   private async doInitialize(): Promise<void> {
+    // 检查是否在Tauri环境中
+    if (!isTauriEnvironment()) {
+      console.warn('Database initialization skipped: not in Tauri environment');
+      // 在浏览器环境中，标记为已初始化但不实际连接数据库
+      this.isInitialized = true;
+      return;
+    }
+
     try {
       // 连接到 SQLite 数据库
       this.db = await Database.load('sqlite:focusflow.db');
@@ -117,11 +126,16 @@ class DatabaseService {
    * 保存专注会话数据
    */
   async saveFocusSession(session: Omit<FocusSession, 'id' | 'created_at'>): Promise<number> {
+    if (!isTauriEnvironment()) {
+      console.warn('Database operation skipped: not in Tauri environment');
+      return 0;
+    }
+
     if (!this.db) await this.initialize();
 
     const result = await this.db!.execute(
-      `INSERT INTO focus_sessions 
-       (date, focus_duration, break_duration, micro_breaks, efficiency_score) 
+      `INSERT INTO focus_sessions
+       (date, focus_duration, break_duration, micro_breaks, efficiency_score)
        VALUES (?, ?, ?, ?, ?)`,
       [
         session.date,
@@ -153,6 +167,11 @@ class DatabaseService {
    * 获取日期范围内的专注会话
    */
   async getFocusSessionsByDateRange(startDate: string, endDate: string): Promise<FocusSession[]> {
+    if (!isTauriEnvironment()) {
+      console.warn('Database operation skipped: not in Tauri environment');
+      return [];
+    }
+
     if (!this.db) await this.initialize();
 
     const sessions = await this.db!.select<FocusSession[]>(
@@ -167,17 +186,22 @@ class DatabaseService {
    * 获取每日统计数据
    */
   async getDailyStats(date: string): Promise<DailyStats | null> {
+    if (!isTauriEnvironment()) {
+      console.warn('Database operation skipped: not in Tauri environment');
+      return null;
+    }
+
     if (!this.db) await this.initialize();
 
     const stats = await this.db!.select<DailyStats[]>(
-      `SELECT 
+      `SELECT
          date,
          SUM(focus_duration) as total_focus_time,
          SUM(break_duration) as total_break_time,
          SUM(micro_breaks) as total_micro_breaks,
          AVG(efficiency_score) as average_efficiency,
          COUNT(*) as session_count
-       FROM focus_sessions 
+       FROM focus_sessions
        WHERE date = ?
        GROUP BY date`,
       [date]
@@ -190,17 +214,22 @@ class DatabaseService {
    * 获取最近N天的统计数据
    */
   async getRecentStats(days: number = 7): Promise<DailyStats[]> {
+    if (!isTauriEnvironment()) {
+      console.warn('Database operation skipped: not in Tauri environment');
+      return [];
+    }
+
     if (!this.db) await this.initialize();
 
     const stats = await this.db!.select<DailyStats[]>(
-      `SELECT 
+      `SELECT
          date,
          SUM(focus_duration) as total_focus_time,
          SUM(break_duration) as total_break_time,
          SUM(micro_breaks) as total_micro_breaks,
          AVG(efficiency_score) as average_efficiency,
          COUNT(*) as session_count
-       FROM focus_sessions 
+       FROM focus_sessions
        WHERE date >= date('now', '-${days} days')
        GROUP BY date
        ORDER BY date DESC`,
@@ -239,6 +268,11 @@ class DatabaseService {
    * 获取应用设置
    */
   async getSetting(key: string): Promise<string | null> {
+    if (!isTauriEnvironment()) {
+      console.warn('Database operation skipped: not in Tauri environment');
+      return null;
+    }
+
     if (!this.db) await this.initialize();
 
     const settings = await this.db!.select<AppSetting[]>(
@@ -294,10 +328,23 @@ class DatabaseService {
     firstSessionDate: string | null;
     lastSessionDate: string | null;
   }> {
+    if (!isTauriEnvironment()) {
+      console.warn('Database operation skipped: not in Tauri environment');
+      return {
+        totalSessions: 0,
+        totalFocusTime: 0,
+        totalBreakTime: 0,
+        totalMicroBreaks: 0,
+        averageEfficiency: 0,
+        firstSessionDate: null,
+        lastSessionDate: null,
+      };
+    }
+
     if (!this.db) await this.initialize();
 
     const stats = await this.db!.select<any[]>(
-      `SELECT 
+      `SELECT
          COUNT(*) as total_sessions,
          SUM(focus_duration) as total_focus_time,
          SUM(break_duration) as total_break_time,
