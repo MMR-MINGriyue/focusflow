@@ -4,16 +4,60 @@ import userEvent from '@testing-library/user-event';
 import ResponsiveSettings from '../ResponsiveSettings';
 import { timerStyleService } from '../../../services/timerStyle';
 
-// Mock the timer style service
+// Mock the timerStyle service
 jest.mock('../../../services/timerStyle', () => ({
   timerStyleService: {
-    getSettings: jest.fn(),
-    getCurrentStyle: jest.fn(),
-    addCustomStyle: jest.fn(),
+    getCurrentStyle: jest.fn(() => ({
+      id: 'digital-modern',
+      name: 'Digital Modern',
+      displayStyle: 'digital',
+      colors: {
+        primary: '#3b82f6',
+        secondary: '#64748b',
+        background: '#ffffff',
+        text: '#1e293b'
+      },
+      layout: {
+        alignment: 'center',
+        spacing: 'normal'
+      },
+      animations: {
+        enabled: true,
+        transitionDuration: 300
+      },
+      responsive: {
+        mobile: { enabled: true, breakpoint: 768 },
+        tablet: { enabled: true, breakpoint: 1024 },
+        desktop: { enabled: true, breakpoint: 1200 }
+      }
+    })),
+    getSettings: jest.fn(() => ({
+      currentStyleId: 'digital-modern',
+      customStyles: [],
+      presetStyles: [],
+      responsive: {
+        mobile: { enabled: true, breakpoint: 768 },
+        tablet: { enabled: true, breakpoint: 1024 },
+        desktop: { enabled: true, breakpoint: 1200 }
+      }
+    })),
+    addListener: jest.fn(),
+    removeListener: jest.fn(),
     setCurrentStyle: jest.fn(),
-  },
+    getAllStyles: jest.fn(() => []),
+    getPresetStyles: jest.fn(() => []),
+    getCustomStyles: jest.fn(() => []),
+    addCustomStyle: jest.fn(),
+    updateCustomStyle: jest.fn(),
+    deleteCustomStyle: jest.fn(),
+    exportSettings: jest.fn(() => '{}'),
+    importSettings: jest.fn(() => true),
+    applyStyle: jest.fn()
+  }
 }));
 
+// Get the mocked service
+import { timerStyleService } from '../../../services/timerStyle';
 const mockTimerStyleService = timerStyleService as jest.Mocked<typeof timerStyleService>;
 
 describe('ResponsiveSettings - Memory Leak Prevention', () => {

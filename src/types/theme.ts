@@ -1,437 +1,368 @@
-export interface ThemeColors {
-  // 基础颜色
-  background: string;
-  foreground: string;
-  card: string;
-  cardForeground: string;
-  popover: string;
-  popoverForeground: string;
-  
+/**
+ * 主题系统类型定义
+ * 定义主题相关的类型和接口
+ */
+
+// 主题模式
+export type ThemeMode = 'light' | 'dark' | 'system';
+
+// 颜色方案
+export interface ColorScheme {
   // 主要颜色
-  primary: string;
-  primaryForeground: string;
-  secondary: string;
-  secondaryForeground: string;
+  primary: {
+    50: string;
+    100: string;
+    200: string;
+    300: string;
+    400: string;
+    500: string;
+    600: string;
+    700: string;
+    800: string;
+    900: string;
+    950: string;
+  };
   
-  // 功能颜色
-  muted: string;
-  mutedForeground: string;
-  accent: string;
-  accentForeground: string;
-  destructive: string;
-  destructiveForeground: string;
+  // 次要颜色
+  secondary: {
+    50: string;
+    100: string;
+    200: string;
+    300: string;
+    400: string;
+    500: string;
+    600: string;
+    700: string;
+    800: string;
+    900: string;
+    950: string;
+  };
   
-  // 边框和输入
-  border: string;
-  input: string;
-  ring: string;
+  // 中性色
+  neutral: {
+    50: string;
+    100: string;
+    200: string;
+    300: string;
+    400: string;
+    500: string;
+    600: string;
+    700: string;
+    800: string;
+    900: string;
+    950: string;
+  };
   
-  // 专注应用特定颜色
-  focus: string;
-  focusForeground: string;
-  break: string;
-  breakForeground: string;
-  microBreak: string;
-  microBreakForeground: string;
+  // 语义化颜色
+  success: {
+    50: string;
+    100: string;
+    200: string;
+    300: string;
+    400: string;
+    500: string;
+    600: string;
+    700: string;
+    800: string;
+    900: string;
+    950: string;
+  };
   
-  // 进度条颜色
-  progressBackground: string;
-  progressForeground: string;
+  warning: {
+    50: string;
+    100: string;
+    200: string;
+    300: string;
+    400: string;
+    500: string;
+    600: string;
+    700: string;
+    800: string;
+    900: string;
+    950: string;
+  };
+  
+  error: {
+    50: string;
+    100: string;
+    200: string;
+    300: string;
+    400: string;
+    500: string;
+    600: string;
+    700: string;
+    800: string;
+    900: string;
+    950: string;
+  };
+  
+  info: {
+    50: string;
+    100: string;
+    200: string;
+    300: string;
+    400: string;
+    500: string;
+    600: string;
+    700: string;
+    800: string;
+    900: string;
+    950: string;
+  };
 }
 
+// 字体配置
+export interface Typography {
+  fontFamily: {
+    sans: string[];
+    serif: string[];
+    mono: string[];
+  };
+  
+  fontSize: {
+    xs: [string, { lineHeight: string; letterSpacing?: string }];
+    sm: [string, { lineHeight: string; letterSpacing?: string }];
+    base: [string, { lineHeight: string; letterSpacing?: string }];
+    lg: [string, { lineHeight: string; letterSpacing?: string }];
+    xl: [string, { lineHeight: string; letterSpacing?: string }];
+    '2xl': [string, { lineHeight: string; letterSpacing?: string }];
+    '3xl': [string, { lineHeight: string; letterSpacing?: string }];
+    '4xl': [string, { lineHeight: string; letterSpacing?: string }];
+    '5xl': [string, { lineHeight: string; letterSpacing?: string }];
+    '6xl': [string, { lineHeight: string; letterSpacing?: string }];
+    '7xl': [string, { lineHeight: string; letterSpacing?: string }];
+    '8xl': [string, { lineHeight: string; letterSpacing?: string }];
+    '9xl': [string, { lineHeight: string; letterSpacing?: string }];
+  };
+  
+  fontWeight: {
+    thin: string;
+    extralight: string;
+    light: string;
+    normal: string;
+    medium: string;
+    semibold: string;
+    bold: string;
+    extrabold: string;
+    black: string;
+  };
+}
+
+// 间距系统
+export interface Spacing {
+  0: string;
+  px: string;
+  0.5: string;
+  1: string;
+  1.5: string;
+  2: string;
+  2.5: string;
+  3: string;
+  3.5: string;
+  4: string;
+  5: string;
+  6: string;
+  7: string;
+  8: string;
+  9: string;
+  10: string;
+  11: string;
+  12: string;
+  14: string;
+  16: string;
+  20: string;
+  24: string;
+  28: string;
+  32: string;
+  36: string;
+  40: string;
+  44: string;
+  48: string;
+  52: string;
+  56: string;
+  60: string;
+  64: string;
+  72: string;
+  80: string;
+  96: string;
+}
+
+// 圆角配置
+export interface BorderRadius {
+  none: string;
+  sm: string;
+  base: string;
+  md: string;
+  lg: string;
+  xl: string;
+  '2xl': string;
+  '3xl': string;
+  full: string;
+}
+
+// 阴影配置
+export interface BoxShadow {
+  sm: string;
+  base: string;
+  md: string;
+  lg: string;
+  xl: string;
+  '2xl': string;
+  inner: string;
+  none: string;
+}
+
+// 断点配置
+export interface Breakpoints {
+  sm: string;
+  md: string;
+  lg: string;
+  xl: string;
+  '2xl': string;
+}
+
+// 动画配置
+export interface Animation {
+  duration: {
+    75: string;
+    100: string;
+    150: string;
+    200: string;
+    300: string;
+    500: string;
+    700: string;
+    1000: string;
+  };
+  
+  easing: {
+    linear: string;
+    in: string;
+    out: string;
+    'in-out': string;
+  };
+  
+  keyframes: {
+    spin: Record<string, Record<string, string>>;
+    ping: Record<string, Record<string, string>>;
+    pulse: Record<string, Record<string, string>>;
+    bounce: Record<string, Record<string, string>>;
+    fadeIn: Record<string, Record<string, string>>;
+    fadeOut: Record<string, Record<string, string>>;
+    slideIn: Record<string, Record<string, string>>;
+    slideOut: Record<string, Record<string, string>>;
+    scaleIn: Record<string, Record<string, string>>;
+    scaleOut: Record<string, Record<string, string>>;
+  };
+}
+
+// 主题配置
 export interface Theme {
-  id: string;
-  name: string;
-  description: string;
-  type: 'light' | 'dark' | 'auto';
-  colors: ThemeColors;
-  cssVariables: Record<string, string>;
+  mode: ThemeMode;
+  colors: ColorScheme;
+  typography: Typography;
+  spacing: Spacing;
+  borderRadius: BorderRadius;
+  boxShadow: BoxShadow;
+  breakpoints: Breakpoints;
+  animation: Animation;
 }
 
-// 预定义主题
-export const themes: Theme[] = [
-  {
-    id: 'light',
-    name: '浅色模式',
-    description: '经典的浅色主题，适合白天使用',
-    type: 'light',
-    colors: {
-      background: 'hsl(0 0% 100%)',
-      foreground: 'hsl(222.2 84% 4.9%)',
-      card: 'hsl(0 0% 100%)',
-      cardForeground: 'hsl(222.2 84% 4.9%)',
-      popover: 'hsl(0 0% 100%)',
-      popoverForeground: 'hsl(222.2 84% 4.9%)',
-      primary: 'hsl(221.2 83.2% 53.3%)',
-      primaryForeground: 'hsl(210 40% 98%)',
-      secondary: 'hsl(210 40% 96%)',
-      secondaryForeground: 'hsl(222.2 84% 4.9%)',
-      muted: 'hsl(210 40% 96%)',
-      mutedForeground: 'hsl(215.4 16.3% 46.9%)',
-      accent: 'hsl(210 40% 96%)',
-      accentForeground: 'hsl(222.2 84% 4.9%)',
-      destructive: 'hsl(0 84.2% 60.2%)',
-      destructiveForeground: 'hsl(210 40% 98%)',
-      border: 'hsl(214.3 31.8% 91.4%)',
-      input: 'hsl(214.3 31.8% 91.4%)',
-      ring: 'hsl(221.2 83.2% 53.3%)',
-      focus: 'hsl(142.1 76.2% 36.3%)',
-      focusForeground: 'hsl(355.7 100% 97.3%)',
-      break: 'hsl(47.9 95.8% 53.1%)',
-      breakForeground: 'hsl(26 83.3% 14.1%)',
-      microBreak: 'hsl(262.1 83.3% 57.8%)',
-      microBreakForeground: 'hsl(210 40% 98%)',
-      progressBackground: 'hsl(210 40% 96%)',
-      progressForeground: 'hsl(221.2 83.2% 53.3%)',
-    },
-    cssVariables: {
-      '--background': '0 0% 100%',
-      '--foreground': '222.2 84% 4.9%',
-      '--card': '0 0% 100%',
-      '--card-foreground': '222.2 84% 4.9%',
-      '--popover': '0 0% 100%',
-      '--popover-foreground': '222.2 84% 4.9%',
-      '--primary': '221.2 83.2% 53.3%',
-      '--primary-foreground': '210 40% 98%',
-      '--secondary': '210 40% 96%',
-      '--secondary-foreground': '222.2 84% 4.9%',
-      '--muted': '210 40% 96%',
-      '--muted-foreground': '215.4 16.3% 46.9%',
-      '--accent': '210 40% 96%',
-      '--accent-foreground': '222.2 84% 4.9%',
-      '--destructive': '0 84.2% 60.2%',
-      '--destructive-foreground': '210 40% 98%',
-      '--border': '214.3 31.8% 91.4%',
-      '--input': '214.3 31.8% 91.4%',
-      '--ring': '221.2 83.2% 53.3%',
-      '--focus': '142.1 76.2% 36.3%',
-      '--focus-foreground': '355.7 100% 97.3%',
-      '--break': '47.9 95.8% 53.1%',
-      '--break-foreground': '26 83.3% 14.1%',
-      '--micro-break': '262.1 83.3% 57.8%',
-      '--micro-break-foreground': '210 40% 98%',
-      '--progress-background': '210 40% 96%',
-      '--progress-foreground': '221.2 83.2% 53.3%',
-    }
-  },
-  {
-    id: 'dark',
-    name: '深色模式',
-    description: '护眼的深色主题，适合夜间使用',
-    type: 'dark',
-    colors: {
-      background: 'hsl(222.2 84% 4.9%)',
-      foreground: 'hsl(210 40% 98%)',
-      card: 'hsl(222.2 84% 4.9%)',
-      cardForeground: 'hsl(210 40% 98%)',
-      popover: 'hsl(222.2 84% 4.9%)',
-      popoverForeground: 'hsl(210 40% 98%)',
-      primary: 'hsl(217.2 91.2% 59.8%)',
-      primaryForeground: 'hsl(222.2 84% 4.9%)',
-      secondary: 'hsl(217.2 32.6% 17.5%)',
-      secondaryForeground: 'hsl(210 40% 98%)',
-      muted: 'hsl(217.2 32.6% 17.5%)',
-      mutedForeground: 'hsl(215 20.2% 65.1%)',
-      accent: 'hsl(217.2 32.6% 17.5%)',
-      accentForeground: 'hsl(210 40% 98%)',
-      destructive: 'hsl(0 62.8% 30.6%)',
-      destructiveForeground: 'hsl(210 40% 98%)',
-      border: 'hsl(217.2 32.6% 17.5%)',
-      input: 'hsl(217.2 32.6% 17.5%)',
-      ring: 'hsl(224.3 76.3% 94.1%)',
-      focus: 'hsl(142.1 70.6% 45.3%)',
-      focusForeground: 'hsl(144.9 80.4% 10%)',
-      break: 'hsl(47.9 95.8% 53.1%)',
-      breakForeground: 'hsl(26 83.3% 14.1%)',
-      microBreak: 'hsl(263.4 70% 50.4%)',
-      microBreakForeground: 'hsl(210 40% 98%)',
-      progressBackground: 'hsl(217.2 32.6% 17.5%)',
-      progressForeground: 'hsl(217.2 91.2% 59.8%)',
-    },
-    cssVariables: {
-      '--background': '222.2 84% 4.9%',
-      '--foreground': '210 40% 98%',
-      '--card': '222.2 84% 4.9%',
-      '--card-foreground': '210 40% 98%',
-      '--popover': '222.2 84% 4.9%',
-      '--popover-foreground': '210 40% 98%',
-      '--primary': '217.2 91.2% 59.8%',
-      '--primary-foreground': '222.2 84% 4.9%',
-      '--secondary': '217.2 32.6% 17.5%',
-      '--secondary-foreground': '210 40% 98%',
-      '--muted': '217.2 32.6% 17.5%',
-      '--muted-foreground': '215 20.2% 65.1%',
-      '--accent': '217.2 32.6% 17.5%',
-      '--accent-foreground': '210 40% 98%',
-      '--destructive': '0 62.8% 30.6%',
-      '--destructive-foreground': '210 40% 98%',
-      '--border': '217.2 32.6% 17.5%',
-      '--input': '217.2 32.6% 17.5%',
-      '--ring': '224.3 76.3% 94.1%',
-      '--focus': '142.1 70.6% 45.3%',
-      '--focus-foreground': '144.9 80.4% 10%',
-      '--break': '47.9 95.8% 53.1%',
-      '--break-foreground': '26 83.3% 14.1%',
-      '--micro-break': '263.4 70% 50.4%',
-      '--micro-break-foreground': '210 40% 98%',
-      '--progress-background': '217.2 32.6% 17.5%',
-      '--progress-foreground': '217.2 91.2% 59.8%',
-    }
-  },
-  {
-    id: 'green',
-    name: '护眼绿',
-    description: '温和的绿色主题，减少眼部疲劳',
-    type: 'light',
-    colors: {
-      background: 'hsl(120 20% 97%)',
-      foreground: 'hsl(120 10% 15%)',
-      card: 'hsl(120 25% 95%)',
-      cardForeground: 'hsl(120 10% 15%)',
-      popover: 'hsl(120 25% 95%)',
-      popoverForeground: 'hsl(120 10% 15%)',
-      primary: 'hsl(142.1 76.2% 36.3%)',
-      primaryForeground: 'hsl(355.7 100% 97.3%)',
-      secondary: 'hsl(120 30% 90%)',
-      secondaryForeground: 'hsl(120 10% 15%)',
-      muted: 'hsl(120 30% 90%)',
-      mutedForeground: 'hsl(120 10% 40%)',
-      accent: 'hsl(120 30% 90%)',
-      accentForeground: 'hsl(120 10% 15%)',
-      destructive: 'hsl(0 84.2% 60.2%)',
-      destructiveForeground: 'hsl(210 40% 98%)',
-      border: 'hsl(120 20% 85%)',
-      input: 'hsl(120 20% 85%)',
-      ring: 'hsl(142.1 76.2% 36.3%)',
-      focus: 'hsl(142.1 76.2% 36.3%)',
-      focusForeground: 'hsl(355.7 100% 97.3%)',
-      break: 'hsl(47.9 95.8% 53.1%)',
-      breakForeground: 'hsl(26 83.3% 14.1%)',
-      microBreak: 'hsl(200 95% 45%)',
-      microBreakForeground: 'hsl(210 40% 98%)',
-      progressBackground: 'hsl(120 30% 90%)',
-      progressForeground: 'hsl(142.1 76.2% 36.3%)',
-    },
-    cssVariables: {
-      '--background': '120 20% 97%',
-      '--foreground': '120 10% 15%',
-      '--card': '120 25% 95%',
-      '--card-foreground': '120 10% 15%',
-      '--popover': '120 25% 95%',
-      '--popover-foreground': '120 10% 15%',
-      '--primary': '142.1 76.2% 36.3%',
-      '--primary-foreground': '355.7 100% 97.3%',
-      '--secondary': '120 30% 90%',
-      '--secondary-foreground': '120 10% 15%',
-      '--muted': '120 30% 90%',
-      '--muted-foreground': '120 10% 40%',
-      '--accent': '120 30% 90%',
-      '--accent-foreground': '120 10% 15%',
-      '--destructive': '0 84.2% 60.2%',
-      '--destructive-foreground': '210 40% 98%',
-      '--border': '120 20% 85%',
-      '--input': '120 20% 85%',
-      '--ring': '142.1 76.2% 36.3%',
-      '--focus': '142.1 76.2% 36.3%',
-      '--focus-foreground': '355.7 100% 97.3%',
-      '--break': '47.9 95.8% 53.1%',
-      '--break-foreground': '26 83.3% 14.1%',
-      '--micro-break': '200 95% 45%',
-      '--micro-break-foreground': '210 40% 98%',
-      '--progress-background': '120 30% 90%',
-      '--progress-foreground': '142.1 76.2% 36.3%',
-    }
-  },
-  {
-    id: 'blue',
-    name: '海洋蓝',
-    description: '清新的蓝色主题，营造宁静氛围',
-    type: 'light',
-    colors: {
-      background: 'hsl(210 40% 98%)',
-      foreground: 'hsl(210 40% 8%)',
-      card: 'hsl(210 40% 96%)',
-      cardForeground: 'hsl(210 40% 8%)',
-      popover: 'hsl(210 40% 96%)',
-      popoverForeground: 'hsl(210 40% 8%)',
-      primary: 'hsl(200 95% 45%)',
-      primaryForeground: 'hsl(210 40% 98%)',
-      secondary: 'hsl(210 40% 92%)',
-      secondaryForeground: 'hsl(210 40% 8%)',
-      muted: 'hsl(210 40% 92%)',
-      mutedForeground: 'hsl(210 20% 40%)',
-      accent: 'hsl(210 40% 92%)',
-      accentForeground: 'hsl(210 40% 8%)',
-      destructive: 'hsl(0 84.2% 60.2%)',
-      destructiveForeground: 'hsl(210 40% 98%)',
-      border: 'hsl(210 40% 88%)',
-      input: 'hsl(210 40% 88%)',
-      ring: 'hsl(200 95% 45%)',
-      focus: 'hsl(200 95% 45%)',
-      focusForeground: 'hsl(210 40% 98%)',
-      break: 'hsl(47.9 95.8% 53.1%)',
-      breakForeground: 'hsl(26 83.3% 14.1%)',
-      microBreak: 'hsl(262.1 83.3% 57.8%)',
-      microBreakForeground: 'hsl(210 40% 98%)',
-      progressBackground: 'hsl(210 40% 92%)',
-      progressForeground: 'hsl(200 95% 45%)',
-    },
-    cssVariables: {
-      '--background': '210 40% 98%',
-      '--foreground': '210 40% 8%',
-      '--card': '210 40% 96%',
-      '--card-foreground': '210 40% 8%',
-      '--popover': '210 40% 96%',
-      '--popover-foreground': '210 40% 8%',
-      '--primary': '200 95% 45%',
-      '--primary-foreground': '210 40% 98%',
-      '--secondary': '210 40% 92%',
-      '--secondary-foreground': '210 40% 8%',
-      '--muted': '210 40% 92%',
-      '--muted-foreground': '210 20% 40%',
-      '--accent': '210 40% 92%',
-      '--accent-foreground': '210 40% 8%',
-      '--destructive': '0 84.2% 60.2%',
-      '--destructive-foreground': '210 40% 98%',
-      '--border': '210 40% 88%',
-      '--input': '210 40% 88%',
-      '--ring': '200 95% 45%',
-      '--focus': '200 95% 45%',
-      '--focus-foreground': '210 40% 98%',
-      '--break': '47.9 95.8% 53.1%',
-      '--break-foreground': '26 83.3% 14.1%',
-      '--micro-break': '262.1 83.3% 57.8%',
-      '--micro-break-foreground': '210 40% 98%',
-      '--progress-background': '210 40% 92%',
-      '--progress-foreground': '200 95% 45%',
-    }
-  },
-  {
-    id: 'purple',
-    name: '紫罗兰',
-    description: '优雅的紫色主题，激发创造力',
-    type: 'light',
-    colors: {
-      background: 'hsl(270 20% 98%)',
-      foreground: 'hsl(270 15% 8%)',
-      card: 'hsl(270 20% 96%)',
-      cardForeground: 'hsl(270 15% 8%)',
-      popover: 'hsl(270 20% 96%)',
-      popoverForeground: 'hsl(270 15% 8%)',
-      primary: 'hsl(262.1 83.3% 57.8%)',
-      primaryForeground: 'hsl(210 40% 98%)',
-      secondary: 'hsl(270 20% 92%)',
-      secondaryForeground: 'hsl(270 15% 8%)',
-      muted: 'hsl(270 20% 92%)',
-      mutedForeground: 'hsl(270 15% 40%)',
-      accent: 'hsl(270 20% 92%)',
-      accentForeground: 'hsl(270 15% 8%)',
-      destructive: 'hsl(0 84.2% 60.2%)',
-      destructiveForeground: 'hsl(210 40% 98%)',
-      border: 'hsl(270 20% 88%)',
-      input: 'hsl(270 20% 88%)',
-      ring: 'hsl(262.1 83.3% 57.8%)',
-      focus: 'hsl(262.1 83.3% 57.8%)',
-      focusForeground: 'hsl(210 40% 98%)',
-      break: 'hsl(47.9 95.8% 53.1%)',
-      breakForeground: 'hsl(26 83.3% 14.1%)',
-      microBreak: 'hsl(200 95% 45%)',
-      microBreakForeground: 'hsl(210 40% 98%)',
-      progressBackground: 'hsl(270 20% 92%)',
-      progressForeground: 'hsl(262.1 83.3% 57.8%)',
-    },
-    cssVariables: {
-      '--background': '270 20% 98%',
-      '--foreground': '270 15% 8%',
-      '--card': '270 20% 96%',
-      '--card-foreground': '270 15% 8%',
-      '--popover': '270 20% 96%',
-      '--popover-foreground': '270 15% 8%',
-      '--primary': '262.1 83.3% 57.8%',
-      '--primary-foreground': '210 40% 98%',
-      '--secondary': '270 20% 92%',
-      '--secondary-foreground': '270 15% 8%',
-      '--muted': '270 20% 92%',
-      '--muted-foreground': '270 15% 40%',
-      '--accent': '270 20% 92%',
-      '--accent-foreground': '270 15% 8%',
-      '--destructive': '0 84.2% 60.2%',
-      '--destructive-foreground': '210 40% 98%',
-      '--border': '270 20% 88%',
-      '--input': '270 20% 88%',
-      '--ring': '262.1 83.3% 57.8%',
-      '--focus': '262.1 83.3% 57.8%',
-      '--focus-foreground': '210 40% 98%',
-      '--break': '47.9 95.8% 53.1%',
-      '--break-foreground': '26 83.3% 14.1%',
-      '--micro-break': '200 95% 45%',
-      '--micro-break-foreground': '210 40% 98%',
-      '--progress-background': '270 20% 92%',
-      '--progress-foreground': '262.1 83.3% 57.8%',
-    }
-  },
-  {
-    id: 'high-contrast',
-    name: '高对比度',
-    description: '高对比度主题，提升可读性',
-    type: 'light',
-    colors: {
-      background: 'hsl(0 0% 100%)',
-      foreground: 'hsl(0 0% 0%)',
-      card: 'hsl(0 0% 100%)',
-      cardForeground: 'hsl(0 0% 0%)',
-      popover: 'hsl(0 0% 100%)',
-      popoverForeground: 'hsl(0 0% 0%)',
-      primary: 'hsl(0 0% 0%)',
-      primaryForeground: 'hsl(0 0% 100%)',
-      secondary: 'hsl(0 0% 90%)',
-      secondaryForeground: 'hsl(0 0% 0%)',
-      muted: 'hsl(0 0% 90%)',
-      mutedForeground: 'hsl(0 0% 30%)',
-      accent: 'hsl(0 0% 90%)',
-      accentForeground: 'hsl(0 0% 0%)',
-      destructive: 'hsl(0 100% 40%)',
-      destructiveForeground: 'hsl(0 0% 100%)',
-      border: 'hsl(0 0% 70%)',
-      input: 'hsl(0 0% 70%)',
-      ring: 'hsl(0 0% 0%)',
-      focus: 'hsl(120 100% 25%)',
-      focusForeground: 'hsl(0 0% 100%)',
-      break: 'hsl(45 100% 40%)',
-      breakForeground: 'hsl(0 0% 100%)',
-      microBreak: 'hsl(240 100% 40%)',
-      microBreakForeground: 'hsl(0 0% 100%)',
-      progressBackground: 'hsl(0 0% 90%)',
-      progressForeground: 'hsl(0 0% 0%)',
-    },
-    cssVariables: {
-      '--background': '0 0% 100%',
-      '--foreground': '0 0% 0%',
-      '--card': '0 0% 100%',
-      '--card-foreground': '0 0% 0%',
-      '--popover': '0 0% 100%',
-      '--popover-foreground': '0 0% 0%',
-      '--primary': '0 0% 0%',
-      '--primary-foreground': '0 0% 100%',
-      '--secondary': '0 0% 90%',
-      '--secondary-foreground': '0 0% 0%',
-      '--muted': '0 0% 90%',
-      '--muted-foreground': '0 0% 30%',
-      '--accent': '0 0% 90%',
-      '--accent-foreground': '0 0% 0%',
-      '--destructive': '0 100% 40%',
-      '--destructive-foreground': '0 0% 100%',
-      '--border': '0 0% 70%',
-      '--input': '0 0% 70%',
-      '--ring': '0 0% 0%',
-      '--focus': '120 100% 25%',
-      '--focus-foreground': '0 0% 100%',
-      '--break': '45 100% 40%',
-      '--break-foreground': '0 0% 100%',
-      '--micro-break': '240 100% 40%',
-      '--micro-break-foreground': '0 0% 100%',
-      '--progress-background': '0 0% 90%',
-      '--progress-foreground': '0 0% 0%',
-    }
-  }
-];
+// 主题偏好设置
+export interface ThemePreferences {
+  mode: ThemeMode;
+  primaryColor: string;
+  fontSize: 'small' | 'medium' | 'large';
+  reducedMotion: boolean;
+  highContrast: boolean;
+  colorBlindFriendly: boolean;
+}
+
+// 主题上下文类型
+export interface ThemeContextType {
+  theme: Theme;
+  mode: ThemeMode;
+  preferences: ThemePreferences;
+  setMode: (mode: ThemeMode) => void;
+  updatePreferences: (preferences: Partial<ThemePreferences>) => void;
+  toggleMode: () => void;
+  isDark: boolean;
+  isLight: boolean;
+  isSystem: boolean;
+}
+
+// 主题变量映射
+export interface ThemeVariables {
+  '--color-primary': string;
+  '--color-primary-foreground': string;
+  '--color-secondary': string;
+  '--color-secondary-foreground': string;
+  '--color-background': string;
+  '--color-foreground': string;
+  '--color-muted': string;
+  '--color-muted-foreground': string;
+  '--color-accent': string;
+  '--color-accent-foreground': string;
+  '--color-destructive': string;
+  '--color-destructive-foreground': string;
+  '--color-border': string;
+  '--color-input': string;
+  '--color-ring': string;
+  '--radius': string;
+  '--font-sans': string;
+  '--font-mono': string;
+}
+
+// 组件主题变体
+export interface ComponentTheme {
+  button: {
+    variants: {
+      default: string;
+      destructive: string;
+      outline: string;
+      secondary: string;
+      ghost: string;
+      link: string;
+    };
+    sizes: {
+      default: string;
+      sm: string;
+      lg: string;
+      icon: string;
+    };
+  };
+  
+  input: {
+    variants: {
+      default: string;
+      error: string;
+      success: string;
+    };
+    sizes: {
+      sm: string;
+      default: string;
+      lg: string;
+    };
+  };
+  
+  card: {
+    variants: {
+      default: string;
+      elevated: string;
+      outlined: string;
+    };
+  };
+  
+  badge: {
+    variants: {
+      default: string;
+      secondary: string;
+      destructive: string;
+      outline: string;
+    };
+  };
+}
+
+// 导出默认主题类型
+export type DefaultTheme = Theme & {
+  components: ComponentTheme;
+};

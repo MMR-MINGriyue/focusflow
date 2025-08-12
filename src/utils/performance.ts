@@ -18,6 +18,7 @@ class PerformanceMonitor {
   private observers: ((metrics: PerformanceMetrics) => void)[] = [];
   private isMonitoring = false;
   private animationFrameId: number | null = null;
+  private metricsIntervalId: number | null = null;
   private lastFrameTime = 0;
   private frameCount = 0;
   private componentUpdateCounts = new Map<string, number>();
@@ -27,14 +28,17 @@ class PerformanceMonitor {
    */
   startMonitoring(): void {
     if (this.isMonitoring) return;
-    
+
+    // 确保先清理任何现有的定时器
+    this.stopMonitoring();
+
     this.isMonitoring = true;
     this.lastFrameTime = performance.now();
     this.frameCount = 0;
     this.measureFrameRate();
-    
+
     // 每秒收集一次性能指标
-    setInterval(() => {
+    this.metricsIntervalId = window.setInterval(() => {
       if (this.isMonitoring) {
         this.collectMetrics();
       }
@@ -46,9 +50,17 @@ class PerformanceMonitor {
    */
   stopMonitoring(): void {
     this.isMonitoring = false;
+
+    // 清理动画帧
     if (this.animationFrameId) {
       cancelAnimationFrame(this.animationFrameId);
       this.animationFrameId = null;
+    }
+
+    // 清理指标收集定时器
+    if (this.metricsIntervalId) {
+      clearInterval(this.metricsIntervalId);
+      this.metricsIntervalId = null;
     }
   }
 

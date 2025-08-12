@@ -1,4 +1,4 @@
-import { databaseService } from '../services/database';
+import { getDatabaseService } from '../services/database';
 
 /**
  * 测试数据生成器
@@ -88,14 +88,16 @@ export class TestDataGenerator {
     error?: string;
   }> {
     try {
-      await databaseService.initialize();
+      const databaseService = getDatabaseService();
+    await databaseService.initialize();
       
       const testData = this.generateTestData(options);
       let insertedCount = 0;
 
       for (const session of testData) {
         try {
-          await databaseService.saveFocusSession(session);
+          const databaseService = getDatabaseService();
+    await databaseService.saveFocusSession(session);
           insertedCount++;
         } catch (error) {
           console.warn('Failed to insert session:', error);
@@ -140,6 +142,7 @@ export class TestDataGenerator {
     error?: string;
   }> {
     try {
+      const databaseService = getDatabaseService();
       await databaseService.initialize();
       
       // 删除最近30天的数据（假设这些是测试数据）
@@ -168,6 +171,7 @@ export class TestDataGenerator {
     stats: any;
   }> {
     try {
+      const databaseService = getDatabaseService();
       await databaseService.initialize();
       
       const issues: string[] = [];
@@ -217,6 +221,7 @@ export class TestDataGenerator {
     error?: string;
   }> {
     try {
+      const databaseService = getDatabaseService();
       await databaseService.initialize();
 
       // 生成大量测试数据

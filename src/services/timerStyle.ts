@@ -439,5 +439,14 @@ class TimerStyleService {
   }
 }
 
+let timerStyleServiceInstance: TimerStyleService | null = null;
+
+export const getTimerStyleService = (): TimerStyleService => {
+  if (!timerStyleServiceInstance) {
+    timerStyleServiceInstance = new TimerStyleService();
+  }
+  return timerStyleServiceInstance;
+};
+
 // 创建单例实例
-export const timerStyleService = new TimerStyleService();
+export const timerStyleService = getTimerStyleService();

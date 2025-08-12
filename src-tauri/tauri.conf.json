@@ -1,9 +1,9 @@
 {
   "build": {
-    "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "npm run build",
-    "devPath": "http://localhost:1420",
-    "distDir": "../dist"
+    "beforeDevCommand": "npm run dev:desktop",
+    "beforeBuildCommand": "npm run build:desktop",
+    "devPath": "http://localhost:3001",
+    "distDir": "../dist-desktop"
   },
   "package": {
     "productName": "FocusFlow",
@@ -39,15 +39,18 @@
     },
 
     "bundle": {
-      "active": false,
+      "active": true,
       "identifier": "com.focusflow.app",
-      "icon": [],
+      "icon": [
+        "icons/icon.png",
+        "icons/icon.ico"
+      ],
       "resources": [],
       "externalBin": [],
-      "copyright": "",
+      "copyright": "Copyright © 2024 FocusFlow Team. All rights reserved.",
       "category": "Productivity",
       "shortDescription": "智能专注时间管理应用",
-      "longDescription": "FocusFlow是一个现代化的专注时间管理桌面应用，基于90分钟专注循环和随机微休息，帮助您提高工作效率和专注力。"
+      "longDescription": "FocusFlow是一个现代化的专注时间管理桌面应用，基于90分钟专注循环和随机微休息，帮助您提高工作效率和专注力。支持自定义样式、音效提醒和数据统计，让您的工作更加高效专注。"
     },
     "security": {
       "csp": null
@@ -72,4 +75,4 @@
       }
     ]
   }
-} 
+}

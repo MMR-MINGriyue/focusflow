@@ -1,7 +1,7 @@
 import { smartTimerService, SmartTimerState, SmartTimerSettings } from '../smartTimer';
 import { cryptoService } from '../crypto';
 import { soundService } from '../sound';
-import { notificationService } from '../notification';
+import { getNotificationService } from '../notification';
 
 // Mock dependencies
 jest.mock('../crypto');
@@ -10,7 +10,7 @@ jest.mock('../notification');
 
 const mockCryptoService = cryptoService as jest.Mocked<typeof cryptoService>;
 const mockSoundService = soundService as jest.Mocked<typeof soundService>;
-const mockNotificationService = notificationService as jest.Mocked<typeof notificationService>;
+const mockNotificationService = getNotificationService() as jest.Mocked<ReturnType<typeof getNotificationService>>;
 
 describe('SmartTimerService', () => {
   beforeAll(() => {

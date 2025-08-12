@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Palette, Eye, Save, RotateCcw, Copy, Download } from 'lucide-react';
 import { Button } from '../ui/Button';
-import { Theme, ThemeColors } from '../../types/theme';
-import { themeService } from '../../services/theme';
-import { hslToHex, hexToHsl } from '../../utils/colorUtils';
+import { Theme, ExtendedThemeColors } from '../../services/themeService';
+import { themeService } from '../../services/themeService';
+
+import { ColorPicker } from './ColorPicker';
+import { ThemePreview } from './ThemePreview';
 
 interface ThemeEditorProps {
   onThemeChange?: (theme: Theme) => void;
@@ -18,7 +20,7 @@ interface NotificationState {
 interface ColorGroup {
   name: string;
   description: string;
-  colors: (keyof ThemeColors)[];
+  colors: (keyof ExtendedThemeColors)[];
 }
 
 const ThemeEditor: React.FC<ThemeEditorProps> = ({ onThemeChange }) => {
@@ -39,32 +41,17 @@ const ThemeEditor: React.FC<ThemeEditorProps> = ({ onThemeChange }) => {
     {
       name: '基础颜色',
       description: '应用的基础背景和前景色',
-      colors: ['background', 'foreground', 'card', 'cardForeground', 'popover', 'popoverForeground']
-    },
-    {
-      name: '主要颜色',
-      description: '主要的品牌色和强调色',
-      colors: ['primary', 'primaryForeground', 'secondary', 'secondaryForeground']
+      colors: ['primary', 'secondary', 'background', 'surface', 'text', 'textSecondary', 'muted']
     },
     {
       name: '功能颜色',
       description: '用于不同功能状态的颜色',
-      colors: ['muted', 'mutedForeground', 'accent', 'accentForeground', 'destructive', 'destructiveForeground']
-    },
-    {
-      name: '边框和输入',
-      description: '边框、输入框和焦点环的颜色',
-      colors: ['border', 'input', 'ring']
+      colors: ['accent', 'success', 'warning', 'error', 'border']
     },
     {
       name: '专注应用特定',
       description: 'FocusFlow 应用特有的功能颜色',
-      colors: ['focus', 'focusForeground', 'break', 'breakForeground', 'microBreak', 'microBreakForeground']
-    },
-    {
-      name: '进度条',
-      description: '进度条的背景和前景色',
-      colors: ['progressBackground', 'progressForeground']
+      colors: ['focus', 'break', 'microBreak']
     }
   ];
 
@@ -92,7 +79,8 @@ const ThemeEditor: React.FC<ThemeEditorProps> = ({ onThemeChange }) => {
       ...theme,
       id: `custom_${Date.now()}`,
       name: `${theme.name} (副本)`,
-      description: `基于 ${theme.name} 的自定义主题`
+      description: `基于 ${theme.name} 的自定义主题`,
+      isCustom: true
     };
     
     setEditingTheme(editableTheme);
@@ -104,7 +92,7 @@ const ThemeEditor: React.FC<ThemeEditorProps> = ({ onThemeChange }) => {
   };
 
   // 更新颜色
-  const updateColor = (colorKey: keyof ThemeColors, value: string) => {
+  const updateColor = (colorKey: keyof ExtendedThemeColors, value: string) => {
     if (!editingTheme) return;
 
     const updatedTheme = {
@@ -115,20 +103,11 @@ const ThemeEditor: React.FC<ThemeEditorProps> = ({ onThemeChange }) => {
       }
     };
 
-    // 同时更新CSS变量
-    const cssVariableKey = `--${colorKey.replace(/([A-Z])/g, '-$1').toLowerCase()}`;
-    const hslValue = convertToHSL(value);
-    
-    updatedTheme.cssVariables = {
-      ...updatedTheme.cssVariables,
-      [cssVariableKey]: hslValue
-    };
-
     setEditingTheme(updatedTheme);
 
     // 如果在预览模式，立即应用
     if (previewMode) {
-      themeService.previewTheme(updatedTheme);
+      themeService.setTheme(updatedTheme.id);
     }
   };
 
@@ -147,32 +126,9 @@ const ThemeEditor: React.FC<ThemeEditorProps> = ({ onThemeChange }) => {
     setThemeDescription(description);
   };
 
-  // 转换颜色到HSL格式
-  const convertToHSL = (color: string): string => {
-    if (color.startsWith('#')) {
-      return hexToHsl(color);
-    }
 
-    if (color.startsWith('hsl(')) {
-      return color.replace('hsl(', '').replace(')', '');
-    }
 
-    return color;
-  };
 
-  // 从HSL提取hex颜色用于颜色选择器
-  const extractHexColor = (hslColor: string): string => {
-    if (hslColor.startsWith('#')) {
-      return hslColor;
-    }
-
-    try {
-      return hslToHex(hslColor);
-    } catch (error) {
-      console.warn('Failed to convert HSL to hex:', hslColor, error);
-      return '#3b82f6';
-    }
-  };
 
   // 切换预览模式
   const togglePreview = () => {
@@ -180,11 +136,18 @@ const ThemeEditor: React.FC<ThemeEditorProps> = ({ onThemeChange }) => {
 
     if (previewMode) {
       // 退出预览，恢复原主题
-      themeService.exitPreview();
+      const currentTheme = themeService.getCurrentTheme();
+      themeService.setTheme(currentTheme.id);
       setPreviewMode(false);
     } else {
-      // 进入预览模式
-      themeService.previewTheme(editingTheme);
+      // 进入预览模式 - 创建临时主题并应用
+      const tempId = `preview_${Date.now()}`;
+      const previewTheme = {
+        ...editingTheme,
+        id: tempId
+      };
+      themeService.createCustomTheme(previewTheme);
+      themeService.setTheme(tempId);
       setPreviewMode(true);
     }
   };
@@ -200,11 +163,15 @@ const ThemeEditor: React.FC<ThemeEditorProps> = ({ onThemeChange }) => {
     };
 
     try {
-      themeService.addCustomTheme(finalTheme);
+      themeService.createCustomTheme(finalTheme);
       themeService.setTheme(finalTheme.id);
       setOriginalTheme(finalTheme);
       setHasChanges(false);
       onThemeChange?.(finalTheme);
+
+      if (previewMode) {
+        setPreviewMode(false);
+      }
 
       showNotification('主题保存成功！', 'success');
     } catch (error) {
@@ -218,12 +185,12 @@ const ThemeEditor: React.FC<ThemeEditorProps> = ({ onThemeChange }) => {
     if (!originalTheme) return;
 
     setEditingTheme({ ...originalTheme });
-    setThemeName(originalTheme.name);
-    setThemeDescription(originalTheme.description);
+    setThemeName(originalTheme.name || '');
+    setThemeDescription(originalTheme.description || '');
     setHasChanges(false);
 
     if (previewMode && originalTheme) {
-      themeService.previewTheme(originalTheme);
+      themeService.setTheme(originalTheme.id);
     }
   };
 
@@ -256,7 +223,7 @@ const ThemeEditor: React.FC<ThemeEditorProps> = ({ onThemeChange }) => {
   };
 
   // 获取可用的基础主题
-  const availableThemes = themeService.getAllThemes().filter(theme => 
+  const availableThemes = themeService.getAvailableThemes().filter(theme => 
     ['light', 'dark', 'nature', 'ocean', 'purple', 'minimal'].includes(theme.id)
   );
 
@@ -355,33 +322,45 @@ const ThemeEditor: React.FC<ThemeEditorProps> = ({ onThemeChange }) => {
       ) : (
         // 主题编辑界面
         <div className="space-y-6">
-          {/* 主题信息编辑 */}
-          <div className="border rounded-lg p-4 bg-gray-50">
-            <h4 className="font-medium text-gray-700 mb-3">主题信息</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">
-                  主题名称
-                </label>
-                <input
-                  type="text"
-                  value={themeName}
-                  onChange={(e) => updateThemeInfo(e.target.value, themeDescription)}
-                  className="w-full p-2 border rounded text-sm"
-                  placeholder="输入主题名称"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">
-                  主题描述
-                </label>
-                <input
-                  type="text"
-                  value={themeDescription}
-                  onChange={(e) => updateThemeInfo(themeName, e.target.value)}
-                  className="w-full p-2 border rounded text-sm"
-                  placeholder="输入主题描述"
-                />
+          {/* 主题预览和信息编辑 */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* 实时预览 */}
+            <div>
+              <h4 className="font-medium text-gray-700 mb-3">实时预览</h4>
+              <ThemePreview
+                theme={editingTheme}
+                showDetails={true}
+                className="w-full"
+              />
+            </div>
+            
+            {/* 主题信息编辑 */}
+            <div>
+              <h4 className="font-medium text-gray-700 mb-3">主题信息</h4>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">
+                    主题名称
+                  </label>
+                  <input
+                    type="text"
+                    value={themeName}
+                    onChange={(e) => updateThemeInfo(e.target.value, themeDescription)}
+                    className="w-full p-2 border rounded text-sm"
+                    placeholder="输入主题名称"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">
+                    主题描述
+                  </label>
+                  <textarea
+                    value={themeDescription}
+                    onChange={(e) => updateThemeInfo(themeName, e.target.value)}
+                    className="w-full p-2 border rounded text-sm h-20 resize-none"
+                    placeholder="输入主题描述"
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -397,22 +376,13 @@ const ThemeEditor: React.FC<ThemeEditorProps> = ({ onThemeChange }) => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                   {group.colors.map((colorKey) => (
                     <div key={colorKey} className="flex items-center space-x-3">
-                      <input
-                        type="color"
-                        value={extractHexColor(editingTheme.colors[colorKey])}
-                        onChange={(e) => updateColor(colorKey, e.target.value)}
-                        className="w-8 h-8 rounded border cursor-pointer"
-                        title={`选择 ${colorKey} 颜色`}
-                        aria-label={`选择 ${colorKey} 颜色`}
+                      <ColorPicker
+                        value={typeof editingTheme.colors[colorKey] === 'string' ? editingTheme.colors[colorKey] : '#3b82f6'}
+                        onChange={(value) => updateColor(colorKey, value)}
+                        label={colorKey.replace(/([A-Z])/g, ' $1').toLowerCase()}
+                        format="hsl"
+                        className="w-full"
                       />
-                      <div className="flex-1">
-                        <div className="text-sm font-medium text-gray-700">
-                          {colorKey.replace(/([A-Z])/g, ' $1').toLowerCase()}
-                        </div>
-                        <div className="text-xs text-gray-500 font-mono">
-                          {editingTheme.colors[colorKey]}
-                        </div>
-                      </div>
                     </div>
                   ))}
                 </div>

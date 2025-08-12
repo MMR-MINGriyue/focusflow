@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Palette, Trash2, Edit3, Copy, Download, Upload, Eye, EyeOff } from 'lucide-react';
+import { Palette, Trash2, Edit3, Copy, Download, Upload, Eye, EyeOff, ShieldCheck } from 'lucide-react';
 import { Button } from '../ui/Button';
-import { Theme } from '../../types/theme';
-import { themeService } from '../../services/theme';
+import type { Theme } from '../../services/themeService';
+import { ThemeValidator, ValidationResult } from '../../utils/themeValidator';
+import { ThemeValidationReport } from './ThemeValidationReport';
+import { themeService } from '../../services/themeService';
 
 interface ThemeManagerProps {
   onThemeChange?: (theme: Theme) => void;
@@ -25,7 +27,7 @@ interface ConfirmDialogState {
 const ThemeManager: React.FC<ThemeManagerProps> = ({ onThemeChange }) => {
   const [customThemes, setCustomThemes] = useState<Theme[]>(themeService.getCustomThemes());
   const [currentTheme, setCurrentTheme] = useState<Theme>(themeService.getCurrentTheme());
-  const [previewTheme, setPreviewTheme] = useState<Theme | null>(themeService.getPreviewTheme());
+  const [previewTheme, setPreviewTheme] = useState<Theme | null>(null);
   const [editingTheme, setEditingTheme] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [editDescription, setEditDescription] = useState('');
@@ -34,6 +36,10 @@ const ThemeManager: React.FC<ThemeManagerProps> = ({ onThemeChange }) => {
     type: 'info',
     visible: false
   });
+
+  const [showValidationReport, setShowValidationReport] = useState(false);
+  const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
+  const [validationTheme, setValidationTheme] = useState<Theme | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState>({
     visible: false,
     title: '',
@@ -41,6 +47,7 @@ const ThemeManager: React.FC<ThemeManagerProps> = ({ onThemeChange }) => {
     onConfirm: () => {},
     onCancel: () => {}
   });
+
 
   // 显示通知
   const showNotification = useCallback((message: string, type: NotificationState['type'] = 'info') => {
@@ -72,8 +79,12 @@ const ThemeManager: React.FC<ThemeManagerProps> = ({ onThemeChange }) => {
       onThemeChange?.(theme);
     };
 
-    themeService.addListener(handleThemeChange);
-    return () => themeService.removeListener(handleThemeChange);
+    const unsubscribe = themeService.addThemeChangeListener(handleThemeChange);
+    return () => {
+      if (typeof unsubscribe === 'function') {
+        unsubscribe();
+      }
+    };
   }, [onThemeChange]);
 
   // 刷新自定义主题列表
@@ -87,13 +98,9 @@ const ThemeManager: React.FC<ThemeManagerProps> = ({ onThemeChange }) => {
       '删除主题',
       '确定要删除这个自定义主题吗？此操作无法撤销。',
       () => {
-        const success = themeService.removeCustomTheme(themeId);
-        if (success) {
-          refreshCustomThemes();
-          showNotification('主题删除成功！', 'success');
-        } else {
-          showNotification('删除主题失败，请重试。', 'error');
-        }
+        themeService.deleteCustomTheme(themeId);
+        refreshCustomThemes();
+        showNotification('主题删除成功！', 'success');
       }
     );
   }, [showConfirmDialog, showNotification]);
@@ -102,24 +109,29 @@ const ThemeManager: React.FC<ThemeManagerProps> = ({ onThemeChange }) => {
   const startEditTheme = (theme: Theme) => {
     setEditingTheme(theme.id);
     setEditName(theme.name);
-    setEditDescription(theme.description);
+    setEditDescription(theme.description || '');
   };
 
   // 保存编辑
   const saveEdit = useCallback(() => {
     if (!editingTheme) return;
 
-    const success = themeService.renameCustomTheme(editingTheme, editName, editDescription);
-    if (success) {
-      refreshCustomThemes();
-      setEditingTheme(null);
-      setEditName('');
-      setEditDescription('');
-      showNotification('主题信息更新成功！', 'success');
-    } else {
+    try {
+      const theme = customThemes.find(t => t.id === editingTheme);
+      if (theme) {
+        const updatedTheme = { ...theme, name: editName, description: editDescription };
+        themeService.deleteCustomTheme(editingTheme);
+        themeService.createCustomTheme(updatedTheme);
+        refreshCustomThemes();
+        setEditingTheme(null);
+        setEditName('');
+        setEditDescription('');
+        showNotification('主题信息更新成功！', 'success');
+      }
+    } catch (error) {
       showNotification('保存失败，请重试。', 'error');
     }
-  }, [editingTheme, editName, editDescription, showNotification]);
+  }, [editingTheme, editName, editDescription, customThemes, showNotification]);
 
   // 取消编辑
   const cancelEdit = () => {
@@ -130,14 +142,20 @@ const ThemeManager: React.FC<ThemeManagerProps> = ({ onThemeChange }) => {
 
   // 复制主题
   const duplicateTheme = useCallback((themeId: string) => {
-    const duplicated = themeService.duplicateTheme(themeId);
-    if (duplicated) {
+    const originalTheme = customThemes.find(t => t.id === themeId);
+    if (originalTheme) {
+      const duplicatedTheme = {
+        ...originalTheme,
+        name: `${originalTheme.name} (复制)`,
+        id: `custom-${Date.now()}`
+      };
+      themeService.createCustomTheme(duplicatedTheme);
       refreshCustomThemes();
-      showNotification(`主题 "${duplicated.name}" 创建成功！`, 'success');
+      showNotification(`主题 "${duplicatedTheme.name}" 创建成功！`, 'success');
     } else {
       showNotification('复制主题失败，请重试。', 'error');
     }
-  }, [showNotification]);
+  }, [customThemes, showNotification]);
 
   // 导出主题
   const exportTheme = (theme: Theme) => {
@@ -162,12 +180,31 @@ const ThemeManager: React.FC<ThemeManagerProps> = ({ onThemeChange }) => {
     reader.onload = (e) => {
       try {
         const content = e.target?.result as string;
-        const theme = themeService.importTheme(content);
-        if (theme) {
-          refreshCustomThemes();
-          showNotification(`主题 "${theme.name}" 导入成功！`, 'success');
+        
+        // 使用主题验证器进行验证
+        const validation = ThemeValidator.validateTheme(content);
+        
+        if (validation.isValid) {
+          const themeId = themeService.importTheme(JSON.stringify(validation.theme));
+          if (themeId) {
+            refreshCustomThemes();
+            const importedTheme = customThemes.find(t => t.id === themeId);
+            
+            // 显示验证报告
+            let message = `主题 "${importedTheme?.name || '未知主题'}" 导入成功！`;
+            if (validation.warnings.length > 0) {
+              message += `\n注意：${validation.warnings.join('；')}`;
+            }
+            showNotification(message, 'success');
+          } else {
+            showNotification('导入失败，请检查文件格式。', 'error');
+          }
         } else {
-          showNotification('导入失败，请检查文件格式。', 'error');
+          // 显示详细错误信息
+          const errorMessage = validation.errors.length > 0 
+            ? `导入失败：${validation.errors.join('；')}`
+            : '导入失败，文件格式不正确';
+          showNotification(errorMessage, 'error');
         }
       } catch (error) {
         console.error('Import error:', error);
@@ -181,17 +218,15 @@ const ThemeManager: React.FC<ThemeManagerProps> = ({ onThemeChange }) => {
   };
 
   // 预览主题
-  const previewThemeToggle = (theme: Theme) => {
-    if (previewTheme && previewTheme.id === theme.id) {
-      // 退出预览
-      themeService.exitPreview();
-      setPreviewTheme(null);
-    } else {
-      // 开始预览
+  const previewThemeToggle = useCallback((theme: Theme | null) => {
+    if (theme) {
       themeService.previewTheme(theme);
       setPreviewTheme(theme);
+    } else {
+      themeService.exitPreview();
+      setPreviewTheme(null);
     }
-  };
+  }, [themeService]);
 
   // 应用主题
   const applyTheme = (themeId: string) => {
@@ -209,6 +244,14 @@ const ThemeManager: React.FC<ThemeManagerProps> = ({ onThemeChange }) => {
     }
   };
 
+  // 验证主题
+  const validateTheme = (theme: Theme) => {
+    const validation = ThemeValidator.validateTheme(JSON.stringify(theme));
+    setValidationResult(validation);
+    setValidationTheme(theme);
+    setShowValidationReport(true);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -217,6 +260,15 @@ const ThemeManager: React.FC<ThemeManagerProps> = ({ onThemeChange }) => {
           <h3 className="text-lg font-semibold">主题管理</h3>
         </div>
         <div className="flex items-center space-x-2">
+          <Button
+            type="button"
+            onClick={() => showNotification('主题模板管理功能即将推出', 'info')}
+            size="sm"
+            className="bg-purple-500 hover:bg-purple-600 text-white"
+          >
+            <Palette className="h-3 w-3 mr-1" />
+            主题模板
+          </Button>
           <input
             type="file"
             accept=".json"
@@ -325,7 +377,7 @@ const ThemeManager: React.FC<ThemeManagerProps> = ({ onThemeChange }) => {
                       <div className="flex items-center space-x-3 flex-1">
                         <div
                           className="w-8 h-8 rounded-full border-2 border-white shadow-sm"
-                          style={{ '--bg-color': theme.colors.primary, backgroundColor: 'var(--bg-color)' } as React.CSSProperties}
+                          style={{ backgroundColor: theme.colors.primary }}
                         />
                         <div className="flex-1">
                           <div className="font-medium text-gray-700">{theme.name}</div>
@@ -399,6 +451,17 @@ const ThemeManager: React.FC<ThemeManagerProps> = ({ onThemeChange }) => {
                         
                         <Button
                           type="button"
+                          onClick={() => validateTheme(theme)}
+                          size="sm"
+                          variant="outline"
+                          className="text-indigo-600 hover:text-indigo-700"
+                          title="验证主题"
+                        >
+                          <ShieldCheck className="h-3 w-3" />
+                        </Button>
+                        
+                        <Button
+                          type="button"
                           onClick={() => exportTheme(theme)}
                           size="sm"
                           variant="outline"
@@ -433,9 +496,11 @@ const ThemeManager: React.FC<ThemeManagerProps> = ({ onThemeChange }) => {
         <ul className="list-disc list-inside space-y-1 mt-1">
           <li>点击"预览"按钮可以临时查看主题效果，不会保存设置</li>
           <li>点击"应用"按钮将主题设为当前使用的主题</li>
+          <li>点击"验证主题"可以查看主题质量报告和可访问性分析</li>
           <li>可以编辑自定义主题的名称和描述</li>
           <li>复制主题可以基于现有主题创建新的变体</li>
           <li>导出的主题文件可以与他人分享或备份</li>
+          <li>导入主题时会自动验证格式并提供详细的验证报告</li>
           <li>删除主题操作无法撤销，请谨慎操作</li>
         </ul>
       </div>
@@ -476,8 +541,22 @@ const ThemeManager: React.FC<ThemeManagerProps> = ({ onThemeChange }) => {
           {notification.message}
         </div>
       )}
+
+      {/* 主题验证报告 */}
+      {showValidationReport && validationResult && validationTheme && (
+        <ThemeValidationReport
+          theme={validationTheme}
+          validation={validationResult}
+          onClose={() => {
+            setShowValidationReport(false);
+            setValidationResult(null);
+            setValidationTheme(null);
+          }}
+        />
+      )}
     </div>
   );
 };
 
+export { ThemeManager };
 export default ThemeManager;

@@ -86,6 +86,13 @@ export interface TimerStyleConfig {
     accent: string;
     progress: string;
     progressBackground: string;
+    focus?: string;
+    break?: string;
+    microBreak?: string;
+    border?: string;
+    error?: string;
+    success?: string;
+    warning?: string;
   };
   
   // 布局配置
@@ -196,7 +203,14 @@ export const DEFAULT_TIMER_STYLES: TimerStyleConfig[] = [
       text: '#1e293b',
       accent: '#06b6d4',
       progress: '#10b981',
-      progressBackground: '#e5e7eb'
+      progressBackground: '#e5e7eb',
+      focus: '#3b82f6',
+      break: '#10b981',
+      microBreak: '#f59e0b',
+      border: '#e5e7eb',
+      error: '#ef4444',
+      success: '#10b981',
+      warning: '#f59e0b'
     },
     layout: {
       alignment: 'center',

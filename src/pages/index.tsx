@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import UnifiedTimer from '../components/Timer/UnifiedTimer';
+import ModernTimerDisplay from '../components/Timer/ModernTimerDisplay';
 import Stats from '../components/Stats/Stats';
 import DatabaseStats from '../components/Stats/DatabaseStats';
 import HealthCheck from '../components/HealthCheck';
@@ -7,13 +7,14 @@ import KeyboardShortcutsHelp from '../components/KeyboardShortcutsHelp';
 import OnboardingTour from '../components/OnboardingTour';
 import ThemeToggle from '../components/ThemeToggle';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/Tabs';
-import { Clock, BarChart3, Database } from 'lucide-react';
+import { Clock, BarChart3, Database, Zap, Settings, Info } from 'lucide-react';
 import { appWindow } from '@tauri-apps/api/window';
 import { useKeyboardShortcuts, commonShortcuts } from '../hooks/useKeyboardShortcuts';
 import { useUnifiedTimerStore } from '../stores/unifiedTimerStore';
 import { useSystemTray } from '../hooks/useSystemTray';
 import { TimerMode } from '../types/unifiedTimer';
 import { useTheme } from '../hooks/useTheme';
+import UnifiedTimer from '../components/Timer/UnifiedTimer';
 
 const Home: React.FC = () => {
   const [stats, setStats] = useState([
@@ -68,46 +69,62 @@ const Home: React.FC = () => {
           start();
         }
       },
+      displayKey: 'Space',
     },
     {
       ...commonShortcuts.R,
       action: () => reset(),
+      displayKey: 'R',
     },
     {
       ...commonShortcuts.T,
       action: () => setActiveTab('timer'),
       description: '切换到计时器标签',
+      displayKey: 'T',
     },
     {
       key: 'I',
       ctrlKey: true,
       action: () => setActiveTab('smart-timer'),
       description: '切换到智能计时器标签',
+      displayKey: 'Ctrl + I',
     },
     {
       ...commonShortcuts.STATS,
       action: () => setActiveTab('stats'),
       description: '切换到统计标签',
+      displayKey: 'S',
     },
     {
       ...commonShortcuts.D,
       action: () => setActiveTab('database'),
       description: '切换到数据库标签',
+      displayKey: 'D',
+    },
+    {
+      key: 'P',
+      ctrlKey: true,
+      action: () => console.log('性能演示快捷键已触发'),
+      description: '打开性能演示',
+      displayKey: 'Ctrl + P',
     },
     {
       ...commonShortcuts.H,
       action: () => setShowShortcutsHelp(true),
       description: '显示快捷键帮助',
+      displayKey: 'H',
     },
     {
       ...commonShortcuts.QUESTION,
       action: () => setShowShortcutsHelp(true),
       description: '显示快捷键帮助',
+      displayKey: '?',
     },
     {
       ...commonShortcuts.ESCAPE,
       action: () => setShowShortcutsHelp(false),
       description: '关闭帮助对话框',
+      displayKey: 'Esc',
     },
   ];
 
@@ -120,7 +137,11 @@ const Home: React.FC = () => {
   // 更新任务栏图标颜色
   const updateTaskbarState = async (state: 'focus' | 'break' | 'microBreak') => {
     // 导入环境检测工具
-    const { safeTauriCall } = await import('../utils/environment');
+    const { safeTauriCall, isTauriEnvironment } = await import('../utils/environment');
+
+    if (!isTauriEnvironment()) {
+      return; // 非Tauri环境不更新任务栏
+    }
 
     const stateText = state === 'focus' ? '专注中' :
                      state === 'break' ? '休息中' : '微休息中';
@@ -161,59 +182,167 @@ const Home: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
-      {/* 顶部工具栏 */}
-      <div className="fixed top-4 right-4 z-30 flex items-center space-x-2">
-        <ThemeToggle variant="dropdown" />
-      </div>
-      <main className="container mx-auto py-8">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 transition-colors">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <div className="border-b px-6 pt-6">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger
-                  value="timer"
-                  className="flex items-center space-x-2"
-                  data-tour="timer-tab"
-                >
-                  <Clock className="h-4 w-4" />
-                  <span>计时器</span>
-                </TabsTrigger>
-                <TabsTrigger
-                  value="stats"
-                  className="flex items-center space-x-2"
-                  data-tour="stats-tab"
-                >
-                  <BarChart3 className="h-4 w-4" />
-                  <span>统计</span>
-                </TabsTrigger>
-                <TabsTrigger
-                  value="database"
-                  className="flex items-center space-x-2"
-                  data-tour="database-tab"
-                >
-                  <Database className="h-4 w-4" />
-                  <span>数据库</span>
-                </TabsTrigger>
-              </TabsList>
-            </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 transition-colors">
+      {/* Header */}
+      <header className="flex justify-between items-center px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+        <div>
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            番茄工作法
+          </h1>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">专注工作，高效生活</p>
+        </div>
+        <div className="flex items-center space-x-4">
+          <ThemeToggle variant="dropdown" />
+        </div>
+      </header>
 
-            <TabsContent value="timer" className="p-6">
+      <main className="container mx-auto py-6 px-4">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          {/* Timer Section */}
+          <div className="xl:col-span-2 space-y-6">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
+              <ModernTimerDisplay className="mb-4" compact={false} />
               <UnifiedTimer
                 onStateChange={(state: string) => {
                   updateTaskbarState(state as any);
                   updateStats(state as any);
                 }}
-                className="max-w-4xl mx-auto"
               />
+            </div>
+
+            {/* Quick Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 text-center">
+                <div className="text-2xl font-bold text-blue-600">0</div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">今日完成</div>
+              </div>
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 text-center">
+                <div className="text-2xl font-bold text-green-600">25</div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">专注时长(分钟)</div>
+              </div>
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 text-center">
+                <div className="text-2xl font-bold text-purple-600">1</div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">连续天数</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-6">
+            {/* Quick Actions */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-4">
+              <h3 className="text-lg font-semibold mb-3 flex items-center">
+                <Settings className="w-5 h-5 mr-2" />
+                快速操作
+              </h3>
+              <div className="space-y-2">
+                <button 
+                  onClick={() => setActiveTab('timer')}
+                  className="w-full px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm"
+                >
+                  开始专注
+                </button>
+                <button 
+                  onClick={() => setActiveTab('performance')}
+                  className="w-full px-3 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm"
+                >
+                  性能演示
+                </button>
+                <a
+                  href="/achievements"
+                  className="block w-full px-3 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors text-sm text-center"
+                >
+                  查看成就
+                </a>
+              </div>
+            </div>
+
+            {/* Shortcuts */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-4">
+              <h3 className="text-lg font-semibold mb-3 flex items-center">
+                <Info className="w-5 h-5 mr-2" />
+                快捷键
+              </h3>
+              <KeyboardShortcutsHelp shortcuts={shortcuts} />
+            </div>
+
+            {/* Tour */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-4">
+              <h3 className="text-lg font-semibold mb-3">新手指南</h3>
+              <OnboardingTour />
+            </div>
+          </div>
+        </div>
+
+        {/* Tabs Section */}
+        <div className="mt-6">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="timer" className="flex items-center justify-center space-x-2">
+                <Clock className="h-4 w-4" />
+                <span>计时器</span>
+              </TabsTrigger>
+              <TabsTrigger value="performance" className="flex items-center justify-center space-x-2">
+                <Zap className="h-4 w-4" />
+                <span>性能演示</span>
+              </TabsTrigger>
+              <TabsTrigger value="stats" className="flex items-center justify-center space-x-2">
+                <BarChart3 className="h-4 w-4" />
+                <span>统计</span>
+              </TabsTrigger>
+              <TabsTrigger value="database" className="flex items-center justify-center space-x-2">
+                <Database className="h-4 w-4" />
+                <span>数据库</span>
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="timer" className="mt-4">
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
+                <UnifiedTimer
+                  onStateChange={(state: string) => {
+                    updateTaskbarState(state as any);
+                    updateStats(state as any);
+                  }}
+                />
+              </div>
             </TabsContent>
 
-            <TabsContent value="stats" className="p-6">
-              <Stats dailyStats={stats} />
+            <TabsContent value="performance" className="mt-4">
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
+                <div className="text-center mb-6">
+                  <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-2">Phase 2 性能优化演示</h2>
+                  <p className="text-gray-600 dark:text-gray-400">体验WebAssembly、Web Worker和CDN优化的性能提升</p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                    <Zap className="w-8 h-8 text-blue-600 dark:text-blue-400 mx-auto mb-2" />
+                    <h3 className="font-semibold mb-1">综合演示</h3>
+                    <a href="/performance-demo" className="text-sm text-blue-600 hover:underline">开始演示 →</a>
+                  </div>
+                  <div className="text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                    <Zap className="w-8 h-8 text-green-600 dark:text-green-400 mx-auto mb-2" />
+                    <h3 className="font-semibold mb-1">Web Worker</h3>
+                    <a href="/worker-demo" className="text-sm text-green-600 hover:underline">开始演示 →</a>
+                  </div>
+                  <div className="text-center p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                    <BarChart3 className="w-8 h-8 text-purple-600 dark:text-purple-400 mx-auto mb-2" />
+                    <h3 className="font-semibold mb-1">性能对比</h3>
+                    <a href="/comparison" className="text-sm text-purple-600 hover:underline">开始对比 →</a>
+                  </div>
+                </div>
+              </div>
             </TabsContent>
 
-            <TabsContent value="database" className="p-0">
-              <DatabaseStats />
+            <TabsContent value="stats" className="mt-4">
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
+                <Stats dailyStats={stats} />
+              </div>
+            </TabsContent>
+
+            <TabsContent value="database" className="mt-4">
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700">
+                <DatabaseStats />
+              </div>
             </TabsContent>
           </Tabs>
         </div>
@@ -235,4 +364,4 @@ const Home: React.FC = () => {
   );
 };
 
-export default Home; 
+export default Home;

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Palette, Eye, Save, RotateCcw, Copy, Download } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { TimerStyleConfig, DEFAULT_TIMER_STYLES } from '../../types/timerStyle';
-import { timerStyleService } from '../../services/timerStyle';
+import { getTimerStyleService } from '../../services/timerStyle';
 import { hslToHex } from '../../utils/colorUtils';
 
 interface TimerStyleEditorProps {
@@ -76,6 +76,7 @@ const TimerStyleEditor: React.FC<TimerStyleEditorProps> = ({ onStyleChange }) =>
 
     // 如果在预览模式，立即应用
     if (previewMode) {
+      const timerStyleService = getTimerStyleService();
       // 临时添加到服务中进行预览
       timerStyleService.addCustomStyle(updatedStyle);
       timerStyleService.previewStyle(updatedStyle.id);
@@ -98,6 +99,7 @@ const TimerStyleEditor: React.FC<TimerStyleEditorProps> = ({ onStyleChange }) =>
   const togglePreview = () => {
     if (!editingStyle) return;
 
+    const timerStyleService = getTimerStyleService();
     if (previewMode) {
       // 退出预览
       timerStyleService.exitPreview();
@@ -120,6 +122,7 @@ const TimerStyleEditor: React.FC<TimerStyleEditorProps> = ({ onStyleChange }) =>
       description: styleDescription
     };
 
+    const timerStyleService = getTimerStyleService();
     const success = timerStyleService.addCustomStyle(finalStyle);
     if (success) {
       timerStyleService.setCurrentStyle(finalStyle.id);
@@ -143,6 +146,7 @@ const TimerStyleEditor: React.FC<TimerStyleEditorProps> = ({ onStyleChange }) =>
     setHasChanges(false);
 
     if (previewMode) {
+      const timerStyleService = getTimerStyleService();
       timerStyleService.addCustomStyle(originalStyle);
       timerStyleService.previewStyle(originalStyle.id);
     }
@@ -164,6 +168,7 @@ const TimerStyleEditor: React.FC<TimerStyleEditorProps> = ({ onStyleChange }) =>
   const exportStyle = () => {
     if (!editingStyle) return;
 
+    const timerStyleService = getTimerStyleService();
     const config = timerStyleService.exportStyle(editingStyle.id);
     if (config) {
       const blob = new Blob([config], { type: 'application/json' });

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Play, Pause, RotateCcw, SkipForward, Settings, Volume2, VolumeX } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { smartTimerService, SmartTimerState } from '../../services/smartTimer';
-import { soundService } from '../../services/sound';
+import { getSoundService } from '../../services/sound';
 
 interface SmartTimerDisplayProps {
   className?: string;
@@ -10,7 +10,10 @@ interface SmartTimerDisplayProps {
 
 const SmartTimerDisplay: React.FC<SmartTimerDisplayProps> = ({ className = '' }) => {
   const [timerState, setTimerState] = useState<SmartTimerState>(smartTimerService.getState());
-  const [soundStatus, setSoundStatus] = useState(soundService.getSoundStatus());
+  const [soundStatus, setSoundStatus] = useState(() => {
+    const soundService = getSoundService();
+    return soundService.getSoundStatus();
+  });
   const [showSettings, setShowSettings] = useState(false);
 
   // 更新计时器状态
@@ -26,6 +29,7 @@ const SmartTimerDisplay: React.FC<SmartTimerDisplayProps> = ({ className = '' })
   // 定期更新音效状态
   useEffect(() => {
     const interval = setInterval(() => {
+      const soundService = getSoundService();
       setSoundStatus(soundService.getSoundStatus());
     }, 1000);
 
@@ -90,11 +94,8 @@ const SmartTimerDisplay: React.FC<SmartTimerDisplayProps> = ({ className = '' })
   const handleSkip = () => smartTimerService.skipToNext();
   
   const handleSoundToggle = () => {
-    if (soundStatus.isMuted) {
-      // soundService.unmute(); // TODO: 实现unmute方法
-    } else {
-      // soundService.mute(); // TODO: 实现mute方法
-    }
+    // TODO: 实现音效控制
+    console.log('音效切换功能待实现');
   };
 
   const phaseInfo = getPhaseInfo();

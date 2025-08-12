@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Upload, Trash2, Play, Pause, Volume2, Edit3, Info, Download } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { soundService, CustomSound } from '../../services/sound';
+import { useConfirmDialog } from '../ui/ConfirmDialog';
 
 interface SoundManagerProps {
   onSoundChange?: () => void;
@@ -17,6 +18,9 @@ const SoundManager: React.FC<SoundManagerProps> = ({ onSoundChange }) => {
   const [editDescription, setEditDescription] = useState('');
   const [showStorageInfo, setShowStorageInfo] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // 确认对话框Hook
+  const { showConfirmDialog, ConfirmDialog } = useConfirmDialog();
 
   const eventTypes = [
     { key: 'focusStart', name: '专注开始', description: '开始专注时播放', category: 'notification' as CustomSound['category'] },
@@ -100,14 +104,25 @@ const SoundManager: React.FC<SoundManagerProps> = ({ onSoundChange }) => {
 
   // 删除自定义音效
   const deleteSound = (soundId: string) => {
-    if (confirm('确定要删除这个音效吗？')) {
-      soundService.removeCustomSound(soundId);
-      const updatedSounds = soundService.getAllSounds();
-      const updatedMappings = soundService.getSoundMappings();
-      setSounds(updatedSounds);
-      setSoundMappings(updatedMappings);
-      onSoundChange?.();
-    }
+    const sound = sounds.find(s => s.id === soundId);
+    const soundName = sound?.name || '音效';
+
+    showConfirmDialog(
+      `确定要删除音效 "${soundName}" 吗？此操作无法撤销。`,
+      () => {
+        soundService.removeCustomSound(soundId);
+        const updatedSounds = soundService.getAllSounds();
+        const updatedMappings = soundService.getSoundMappings();
+        setSounds(updatedSounds);
+        setSoundMappings(updatedMappings);
+        onSoundChange?.();
+      },
+      {
+        type: 'danger',
+        confirmText: '删除',
+        confirmDanger: true
+      }
+    );
   };
 
   // 设置音效映射
@@ -399,6 +414,9 @@ const SoundManager: React.FC<SoundManagerProps> = ({ onSoundChange }) => {
           <li>可以导出配置文件备份您的音效设置</li>
         </ul>
       </div>
+
+      {/* 确认对话框 */}
+      <ConfirmDialog />
     </div>
   );
 };

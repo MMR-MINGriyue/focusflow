@@ -1,10 +1,10 @@
-﻿module.exports = {
+export default {
   preset: "ts-jest",
   testEnvironment: "jsdom",
   setupFilesAfterEnv: ["<rootDir>/src/tests/setup.ts"],
   fakeTimers: {
     enableGlobally: false,
-    legacyFakeTimers: true
+    legacyFakeTimers: false
   },
   moduleNameMapper: {
     "^@/(.*)$": "<rootDir>/src/$1",

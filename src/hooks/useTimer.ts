@@ -1,79 +1,121 @@
-import { useEffect, useRef } from 'react';
-import { useTimerStore } from '../stores/timerStore';
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { useUnifiedTimerStore } from '../stores/unifiedTimerStore';
 
 /**
- * 计时器逻辑 Hook
+ * 计时器逻辑 Hook (已更新为使用统一状态管理)
  * 处理计时器的核心逻辑，包括倒计时、状态转换、微休息检查等
  */
 export const useTimer = () => {
   const {
     currentState,
-    timeLeft,
     isActive,
     settings,
     transitionTo,
-    updateTimeLeft,
     checkMicroBreakTrigger,
     triggerMicroBreak,
-  } = useTimerStore();
+  } = useUnifiedTimerStore();
 
-  const intervalRef = useRef<number | null>(null);
-  const microBreakCheckRef = useRef<number | null>(null);
+  // Worker状态管理
+  const workerRef = useRef<Worker | null>(null);
+  const [formattedTime, setFormattedTime] = useState('25:00');
+  const [workerTimeLeft, setWorkerTimeLeft] = useState(1500);
+  const [progress, setProgress] = useState(0);
 
-  // 主计时器逻辑
+  // 初始化Worker
   useEffect(() => {
-    if (isActive && timeLeft > 0) {
-      intervalRef.current = window.setInterval(() => {
-        const newTimeLeft = useTimerStore.getState().timeLeft - 1;
-        updateTimeLeft(newTimeLeft);
-      }, 1000);
-    } else if (timeLeft === 0) {
-      // 时间到，处理状态转换
-      handleTimeUp();
-    } else {
-      // 清除计时器
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-    }
+    // 创建Worker实例
+    workerRef.current = new Worker(new URL('../workers/timerWorker.ts', import.meta.url));
+    const worker = workerRef.current;
 
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
+    // 设置Worker消息处理
+    worker.onmessage = (e) => {
+      const { type, data } = e.data;
+      if (type === 'update' && data) {
+        setFormattedTime(data.formattedTime);
+        setWorkerTimeLeft(data.timeLeft);
+        setProgress(data.progress);
+      } else if (type === 'complete') {
+        handleTimeUp();
       }
     };
-  }, [isActive, timeLeft, updateTimeLeft]);
+
+    // 错误处理
+    worker.onerror = (error) => {
+      console.error('Worker error:', error);
+    };
+
+    // 清理函数
+    return () => {
+      worker.terminate();
+      workerRef.current = null;
+    };
+  }, []);
+
+  // 根据当前状态设置计时器时长
+  useEffect(() => {
+    const worker = workerRef.current;
+    if (!worker) return;
+
+    const currentSettings = settings.mode === 'classic' ? settings.classic : settings.smart;
+    let duration = 0;
+
+    switch (currentState) {
+      case 'focus':
+        duration = currentSettings.focusDuration * 60;
+        break;
+      case 'break':
+        duration = currentSettings.breakDuration * 60;
+        break;
+      case 'microBreak':
+        if (settings.mode === 'classic') {
+          duration = settings.classic.microBreakDuration * 60;
+        } else {
+          const min = settings.smart.microBreakMinDuration;
+          const max = settings.smart.microBreakMaxDuration;
+          duration = Math.floor((min + max) / 2) * 60;
+        }
+        break;
+    }
+
+    if (duration > 0) {
+      worker.postMessage({ command: 'setDuration', payload: { duration } });
+    }
+  }, [currentState, settings]);
+
+  // 控制计时器状态（开始/暂停）
+  useEffect(() => {
+    const worker = workerRef.current;
+    if (!worker) return;
+
+    if (isActive) {
+      worker.postMessage({ command: 'start' });
+    } else {
+      worker.postMessage({ command: 'pause' });
+    }
+  }, [isActive]);
 
   // 微休息检查逻辑
   useEffect(() => {
+    let microBreakCheckRef: number | null = null;
+
     if (isActive && currentState === 'focus') {
-      microBreakCheckRef.current = window.setInterval(() => {
+      microBreakCheckRef = window.setInterval(() => {
         if (checkMicroBreakTrigger()) {
           triggerMicroBreak();
         }
       }, 1000); // 每秒检查一次
-    } else {
-      if (microBreakCheckRef.current) {
-        clearInterval(microBreakCheckRef.current);
-        microBreakCheckRef.current = null;
-      }
     }
 
     return () => {
-      if (microBreakCheckRef.current) {
-        clearInterval(microBreakCheckRef.current);
-        microBreakCheckRef.current = null;
+      if (microBreakCheckRef) {
+        clearInterval(microBreakCheckRef);
       }
     };
   }, [isActive, currentState, checkMicroBreakTrigger, triggerMicroBreak]);
 
   // 处理时间到的情况
-  const handleTimeUp = () => {
-    const state = useTimerStore.getState();
-    
-    switch (state.currentState) {
+  const handleTimeUp = useCallback(() => {
+    switch (currentState) {
       case 'focus':
         transitionTo('break');
         break;
@@ -84,14 +126,7 @@ export const useTimer = () => {
         transitionTo('focus');
         break;
     }
-  };
-
-  // 格式化时间显示
-  const formatTime = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
+  }, [currentState, transitionTo]);
 
   // 获取状态显示文本
   const getStateText = (): string => {
@@ -107,54 +142,13 @@ export const useTimer = () => {
     }
   };
 
-  // 获取状态颜色
-  const getStateColor = (): string => {
-    switch (currentState) {
-      case 'focus':
-        return 'text-green-600';
-      case 'break':
-        return 'text-red-600';
-      case 'microBreak':
-        return 'text-yellow-600';
-      default:
-        return 'text-gray-600';
-    }
-  };
-
-  // 获取进度百分比
-  const getProgress = (): number => {
-    let totalTime: number;
-    switch (currentState) {
-      case 'focus':
-        totalTime = settings.focusDuration * 60;
-        break;
-      case 'break':
-        totalTime = settings.breakDuration * 60;
-        break;
-      case 'microBreak':
-        totalTime = settings.microBreakDuration * 60;
-        break;
-      default:
-        totalTime = 1;
-    }
-    
-    return Math.max(0, Math.min(100, ((totalTime - timeLeft) / totalTime) * 100));
-  };
-
   return {
-    // 状态
     currentState,
-    timeLeft,
+    timeLeft: workerTimeLeft,
     isActive,
     settings,
-    
-    // 计算属性
-    formattedTime: formatTime(timeLeft),
+    formattedTime,
     stateText: getStateText(),
-    stateColor: getStateColor(),
-    progress: getProgress(),
-    
-    // 方法
-    formatTime,
+    progress: progress * 100, // 转换为百分比
   };
 };

@@ -1,34 +1,42 @@
-import React, { useState, useEffect } from 'react';
+import * as React from 'react';
+import { useState, useEffect } from 'react';
 import { Palette, Check, Download, Upload } from 'lucide-react';
 import { Button } from '../ui/Button';
-import { themeService } from '../../services/theme';
-import { Theme } from '../../types/theme';
+import { getThemeService } from '../../services/themeService';
+import { Theme } from '../../services/themeService';
 
 interface ThemeSelectorProps {
   onThemeChange?: (theme: Theme) => void;
 }
 
 const ThemeSelector: React.FC<ThemeSelectorProps> = ({ onThemeChange }) => {
-  const [currentTheme, setCurrentTheme] = useState<Theme>(themeService.getCurrentTheme());
-  const [themes, setThemes] = useState<Theme[]>(themeService.getAllThemes());
+  const [currentTheme, setCurrentTheme] = useState<Theme>(() => {
+    const themeService = getThemeService();
+    return themeService.getCurrentTheme();
+  });
+  const [themes, setThemes] = useState<Theme[]>(() => {
+    const themeService = getThemeService();
+    return themeService.getAvailableThemes();
+  });
   const [showImportExport, setShowImportExport] = useState(false);
 
   useEffect(() => {
-    const handleThemeChange = (theme: Theme) => {
+    const themeService = getThemeService();
+    const unsubscribe = themeService.addThemeChangeListener((theme: Theme) => {
       setCurrentTheme(theme);
       onThemeChange?.(theme);
-    };
-
-    themeService.addListener(handleThemeChange);
-    return () => themeService.removeListener(handleThemeChange);
+    });
+    return unsubscribe;
   }, [onThemeChange]);
 
   const handleThemeSelect = (themeId: string) => {
+    const themeService = getThemeService();
     themeService.setTheme(themeId);
   };
 
   const exportCurrentTheme = () => {
-    const themeJson = themeService.exportTheme(currentTheme);
+    const themeService = getThemeService();
+    const themeJson = themeService.exportTheme(currentTheme.id);
     const blob = new Blob([themeJson], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -47,11 +55,18 @@ const ThemeSelector: React.FC<ThemeSelectorProps> = ({ onThemeChange }) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
+        const themeService = getThemeService();
         const themeJson = e.target?.result as string;
-        const importedTheme = themeService.importTheme(themeJson);
-        if (importedTheme) {
-          setThemes(themeService.getAllThemes());
-          alert(`主题 "${importedTheme.name}" 导入成功！`);
+        const importedThemeId = themeService.importTheme(themeJson);
+        if (importedThemeId) {
+          const allThemes = themeService.getAvailableThemes();
+          const newTheme = allThemes.find(t => t.id === importedThemeId);
+          setThemes(allThemes);
+          if (newTheme) {
+            alert(`主题 "${newTheme.name}" 导入成功！`);
+          } else {
+            alert('主题导入成功！');
+          }
         } else {
           alert('主题导入失败，请检查文件格式');
         }
@@ -66,6 +81,7 @@ const ThemeSelector: React.FC<ThemeSelectorProps> = ({ onThemeChange }) => {
   };
 
   const ThemePreview: React.FC<{ theme: Theme; isSelected: boolean }> = ({ theme, isSelected }) => {
+    const themeService = getThemeService();
     const previewStyle = themeService.getThemePreviewStyle(theme);
     const previewElements = themeService.getThemePreviewElements(theme);
 

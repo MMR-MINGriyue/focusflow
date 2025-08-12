@@ -158,11 +158,12 @@ describe('Settings Component', () => {
 
     it('shows basic settings by default', () => {
       render(<Settings {...defaultProps} />);
-      
-      expect(screen.getByText('专注时长')).toBeInTheDocument();
-      expect(screen.getByText('休息时长')).toBeInTheDocument();
+
+      // 使用正则表达式匹配文本，因为可能被分割成多个元素
+      expect(screen.getByText(/专注时长/)).toBeInTheDocument();
+      expect(screen.getByText(/休息时长/)).toBeInTheDocument();
       expect(screen.getByText('启用音效')).toBeInTheDocument();
-      expect(screen.getByText('启用通知')).toBeInTheDocument();
+      expect(screen.getByText('桌面通知')).toBeInTheDocument();
     });
   });
 
@@ -218,7 +219,7 @@ describe('Settings Component', () => {
       render(<Settings {...defaultProps} notificationEnabled={true} />);
 
       // Look for the notification switch by its label
-      expect(screen.getByText('启用通知')).toBeInTheDocument();
+      expect(screen.getByText('桌面通知')).toBeInTheDocument();
     });
 
     it('calls onSettingsChange when sound setting changes', async () => {
@@ -242,8 +243,8 @@ describe('Settings Component', () => {
     it('shows basic settings by default', () => {
       render(<Settings {...defaultProps} />);
 
-      expect(screen.getByText('专注时长')).toBeInTheDocument();
-      expect(screen.getByText('休息时长')).toBeInTheDocument();
+      expect(screen.getByText(/专注时长/)).toBeInTheDocument();
+      expect(screen.getByText(/休息时长/)).toBeInTheDocument();
     });
 
     it('switches between different tabs', async () => {
@@ -256,7 +257,7 @@ describe('Settings Component', () => {
 
       // Click on basic tab (should be active by default)
       await user.click(basicTab);
-      expect(screen.getByText('专注时长')).toBeInTheDocument();
+      expect(screen.getByText(/专注时长/)).toBeInTheDocument();
     });
 
     it('handles tab switching correctly', async () => {
@@ -264,7 +265,7 @@ describe('Settings Component', () => {
       render(<Settings {...defaultProps} />);
 
       // Should start with basic settings
-      expect(screen.getByText('专注时长')).toBeInTheDocument();
+      expect(screen.getByText(/专注时长/)).toBeInTheDocument();
 
       // Tab switching functionality is handled by the component
       // We can verify the basic structure is rendered
@@ -275,8 +276,8 @@ describe('Settings Component', () => {
   describe('Micro Break Settings', () => {
     it('displays micro break interval settings', () => {
       render(<Settings {...defaultProps} />);
-      
-      expect(screen.getByText('微休息间隔')).toBeInTheDocument();
+
+      expect(screen.getByText(/最小间隔/)).toBeInTheDocument();
     });
 
     it('calls onSettingsChange when micro break settings change', async () => {

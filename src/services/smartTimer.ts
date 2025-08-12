@@ -5,8 +5,8 @@
  */
 
 import { cryptoService } from './crypto';
-import { soundService } from './sound';
-import { notificationService } from './notification';
+import { getSoundService } from './sound';
+import { getNotificationService } from './notification';
 
 export interface SmartTimerSettings {
   // 基础循环设置
@@ -587,6 +587,7 @@ class SmartTimerService {
 
     const soundKey = soundMap[type];
     if (soundKey) {
+      const soundService = getSoundService();
       soundService.playMapped(soundKey as any);
     }
   }
@@ -597,7 +598,7 @@ class SmartTimerService {
   private sendNotification(title: string, body: string): void {
     if (!this.settings.notificationEnabled) return;
 
-    notificationService.sendNotification(title, body);
+    getNotificationService().sendNotification(title, body);
   }
 
   /**

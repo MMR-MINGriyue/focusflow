@@ -1,495 +1,412 @@
-import React, { useState } from 'react';
-import { TimerSettings } from '../../stores/timerStore';
+import React, { useState, useEffect } from 'react';
+import { Button } from '../ui/Button';
 import { Switch } from '../ui/Switch';
-import { Slider } from '../ui/Slider';
-import { Volume2, Bell, Clock, Play, Pause, Settings as SettingsIcon, Palette, Monitor, Zap, Sparkles } from 'lucide-react';
-import { soundService } from '../../services/sound';
-import SoundManager from './SoundManager';
-import SoundMappingConfig from './SoundMappingConfig';
-import SoundVolumeControl from './SoundVolumeControl';
-import SoundPersistenceTest from './SoundPersistenceTest';
-import ThemeEditor from './ThemeEditor';
-import ThemeSelector from './ThemeSelector';
-import ThemeManager from './ThemeManager';
-import TimerStyleSelector from './TimerStyleSelector';
-import TimerStyleEditor from './TimerStyleEditor';
-import TimerStyleManager from './TimerStyleManager';
-import TimerAnimationSettings from './TimerAnimationSettings';
-import BackgroundDecorationSettings from './BackgroundDecorationSettings';
-import ResponsiveSettings from './ResponsiveSettings';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/Tabs';
+import { 
+  TimerMode, 
+  ClassicTimerSettings, 
+  SmartTimerSettings, 
+  UnifiedTimerSettings 
+} from '../../types/unifiedTimer';
 
-interface SettingsProps extends TimerSettings {
-  onSettingsChange: (settings: TimerSettings) => void;
+interface SettingsProps {
+  settings: UnifiedTimerSettings;
+  onSettingsChange: (settings: Partial<UnifiedTimerSettings>) => void;
 }
 
-const Settings: React.FC<SettingsProps> = ({
-  focusDuration = 90,
-  breakDuration = 20,
-  microBreakMinInterval = 10,
-  microBreakMaxInterval = 30,
-  microBreakDuration = 3,
-  soundEnabled = true,
-  notificationEnabled = true,
-  volume = 0.5,
-  onSettingsChange,
-}) => {
-  const [playingSound, setPlayingSound] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'basic' | 'sound' | 'mapping' | 'volume' | 'test' | 'theme' | 'themeEditor' | 'themeManager' | 'timerStyle' | 'timerStyleEditor' | 'timerStyleManager' | 'timerAnimation' | 'backgroundDecoration' | 'responsive'>('basic');
-  const [showSoundManager, setShowSoundManager] = useState(false);
+// 定义Card组件的Props类型
+interface CardProps {
+  children: React.ReactNode;
+  className?: string;
+}
 
-  // 音效类型定义
-  const soundTypes = [
-    { key: 'focusStart', name: '专注开始', description: '开始专注时播放' },
-    { key: 'breakStart', name: '休息开始', description: '开始休息时播放' },
-    { key: 'microBreak', name: '微休息', description: '微休息时播放' },
-    { key: 'notification', name: '通知提示', description: '通用通知音' },
-    { key: 'whiteNoise', name: '白噪音', description: '背景环境音（循环）' },
-  ];
+// 定义CardHeader组件的Props类型
+interface CardHeaderProps {
+  children: React.ReactNode;
+  className?: string;
+}
 
-  // 播放音效预览
-  const playSound = (soundKey: string) => {
-    if (playingSound === soundKey) {
-      soundService.stop(soundKey as any);
-      setPlayingSound(null);
-    } else {
-      if (playingSound) {
-        soundService.stop(playingSound as any);
-      }
-      soundService.setVolume(soundKey as any, volume);
-      soundService.play(soundKey as any);
-      setPlayingSound(soundKey);
+// 定义CardTitle组件的Props类型
+interface CardTitleProps {
+  children: React.ReactNode;
+  className?: string;
+}
 
-      // 非循环音效自动停止状态
-      if (soundKey !== 'whiteNoise') {
-        setTimeout(() => setPlayingSound(null), 3000);
-      }
-    }
-  };
-  const handleSliderChange = (name: keyof TimerSettings, value: number) => {
-    let updatedSettings = {
-      focusDuration,
-      breakDuration,
-      microBreakMinInterval,
-      microBreakMaxInterval,
-      microBreakDuration,
-      soundEnabled,
-      notificationEnabled,
-      volume,
-      [name]: value,
+// 定义CardContent组件的Props类型
+interface CardContentProps {
+  children: React.ReactNode;
+  className?: string;
+}
+
+// 定义Label组件的Props类型
+interface LabelProps extends React.LabelHTMLAttributes<HTMLLabelElement> {
+  children: React.ReactNode;
+  className?: string;
+}
+
+// 定义Input组件的Props类型
+interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+  className?: string;
+}
+
+// Card组件实现
+const Card: React.FC<CardProps> = ({ children, className = '' }) => (
+  <div className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm ${className}`}>
+    {children}
+  </div>
+);
+
+// CardHeader组件实现
+const CardHeader: React.FC<CardHeaderProps> = ({ children, className = '' }) => (
+  <div className={`p-6 pb-2 ${className}`}>
+    {children}
+  </div>
+);
+
+// CardTitle组件实现
+const CardTitle: React.FC<CardTitleProps> = ({ children, className = '' }) => (
+  <h3 className={`text-lg font-semibold leading-none tracking-tight ${className}`}>
+    {children}
+  </h3>
+);
+
+// CardContent组件实现
+const CardContent: React.FC<CardContentProps> = ({ children, className = '' }) => (
+  <div className={`p-6 pt-2 ${className}`}>
+    {children}
+  </div>
+);
+
+// Label组件实现
+const Label: React.FC<LabelProps> = ({ children, className = '', ...props }) => (
+  <label 
+    className={`text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 ${className}`}
+    {...props}
+  >
+    {children}
+  </label>
+);
+
+// Input组件实现
+const Input: React.FC<InputProps> = ({ className = '', ...props }) => (
+  <input
+    className={`flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm ring-offset-white file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-900 dark:ring-offset-gray-900 dark:placeholder:text-gray-400 dark:focus-visible:ring-blue-300 ${className}`}
+    {...props}
+  />
+);
+
+export const Settings: React.FC<SettingsProps> = ({ settings, onSettingsChange }) => {
+  // 经典模式设置
+  const [focusDuration, setFocusDuration] = useState(settings.classic.focusDuration);
+  const [breakDuration, setBreakDuration] = useState(settings.classic.breakDuration);
+  const [microBreakDuration, setMicroBreakDuration] = useState(settings.classic.microBreakDuration);
+  const [microBreakMinInterval, setMicroBreakMinInterval] = useState(settings.classic.microBreakMinInterval);
+  
+  // 智能模式设置
+  const [smartFocusDuration, setSmartFocusDuration] = useState(settings.smart.focusDuration);
+  const [smartBreakDuration, setSmartBreakDuration] = useState(settings.smart.breakDuration);
+  const [smartMicroBreakMinInterval, setSmartMicroBreakMinInterval] = useState(settings.smart.microBreakMinInterval);
+  const [smartMicroBreakMaxInterval, setSmartMicroBreakMaxInterval] = useState(settings.smart.microBreakMaxInterval);
+  const [smartMicroBreakMinDuration, setSmartMicroBreakMinDuration] = useState(settings.smart.microBreakMinDuration);
+  const [smartMicroBreakMaxDuration, setSmartMicroBreakMaxDuration] = useState(settings.smart.microBreakMaxDuration);
+  const [peakFocusHours, setPeakFocusHours] = useState(settings.smart.peakFocusHours.join(','));
+  const [lowEnergyHours, setLowEnergyHours] = useState(settings.smart.lowEnergyHours.join(','));
+  const [maxContinuousFocusTime, setMaxContinuousFocusTime] = useState(settings.smart.maxContinuousFocusTime);
+  const [forcedBreakThreshold, setForcedBreakThreshold] = useState(settings.smart.forcedBreakThreshold);
+  
+  // 通用设置
+  const [mode, setMode] = useState<TimerMode>(settings.mode);
+  const [soundEnabled, setSoundEnabled] = useState(settings.soundEnabled);
+  const [notificationEnabled, setNotificationEnabled] = useState(settings.notificationEnabled);
+
+  // 当设置变化时更新状态
+  useEffect(() => {
+    setFocusDuration(settings.classic.focusDuration);
+    setBreakDuration(settings.classic.breakDuration);
+    setMicroBreakDuration(settings.classic.microBreakDuration);
+    setMicroBreakMinInterval(settings.classic.microBreakMinInterval);
+    
+    setSmartFocusDuration(settings.smart.focusDuration);
+    setSmartBreakDuration(settings.smart.breakDuration);
+    setSmartMicroBreakMinInterval(settings.smart.microBreakMinInterval);
+    setSmartMicroBreakMaxInterval(settings.smart.microBreakMaxInterval);
+    setSmartMicroBreakMinDuration(settings.smart.microBreakMinDuration);
+    setSmartMicroBreakMaxDuration(settings.smart.microBreakMaxDuration);
+    setPeakFocusHours(settings.smart.peakFocusHours.join(','));
+    setLowEnergyHours(settings.smart.lowEnergyHours.join(','));
+    setMaxContinuousFocusTime(settings.smart.maxContinuousFocusTime);
+    setForcedBreakThreshold(settings.smart.forcedBreakThreshold);
+    
+    setMode(settings.mode);
+    setSoundEnabled(settings.soundEnabled);
+    setNotificationEnabled(settings.notificationEnabled);
+  }, [settings]);
+
+  // 保存经典模式设置
+  const saveClassicSettings = () => {
+    const newSettings: Partial<UnifiedTimerSettings> = {
+      classic: {
+        focusDuration,
+        breakDuration,
+        microBreakDuration,
+        microBreakMinInterval,
+        microBreakMaxInterval: microBreakMinInterval, // 使用相同的值
+      } as ClassicTimerSettings
     };
-
-    // 确保微休息间隔的逻辑一致性，但不强制联动
-    if (name === 'microBreakMinInterval' && value >= microBreakMaxInterval) {
-      updatedSettings.microBreakMaxInterval = value + 5; // 自动调整最大值，保持5分钟差距
-    } else if (name === 'microBreakMaxInterval' && value <= microBreakMinInterval) {
-      updatedSettings.microBreakMinInterval = Math.max(5, value - 5); // 自动调整最小值，保持5分钟差距
-    }
-
-    onSettingsChange(updatedSettings);
+    
+    onSettingsChange(newSettings);
   };
 
-  const handleSwitchChange = (name: keyof TimerSettings, checked: boolean) => {
-    onSettingsChange({
-      focusDuration,
-      breakDuration,
-      microBreakMinInterval,
-      microBreakMaxInterval,
-      microBreakDuration,
+  // 保存智能模式设置
+  const saveSmartSettings = () => {
+    const newSettings: Partial<UnifiedTimerSettings> = {
+      smart: {
+        focusDuration: smartFocusDuration,
+        breakDuration: smartBreakDuration,
+        enableMicroBreaks: true,
+        microBreakMinInterval: smartMicroBreakMinInterval,
+        microBreakMaxInterval: smartMicroBreakMaxInterval,
+        microBreakMinDuration: smartMicroBreakMinDuration,
+        microBreakMaxDuration: smartMicroBreakMaxDuration,
+        enableAdaptiveAdjustment: true,
+        adaptiveFactorFocus: 1.0,
+        adaptiveFactorBreak: 1.0,
+        enableCircadianOptimization: true,
+        peakFocusHours: peakFocusHours.split(',').map(h => parseInt(h.trim())).filter(h => !isNaN(h)),
+        lowEnergyHours: lowEnergyHours.split(',').map(h => parseInt(h.trim())).filter(h => !isNaN(h)),
+        maxContinuousFocusTime,
+        forcedBreakThreshold,
+      } as SmartTimerSettings
+    };
+    
+    onSettingsChange(newSettings);
+  };
+
+  // 保存通用设置
+  const saveGeneralSettings = () => {
+    const newSettings: Partial<UnifiedTimerSettings> = {
+      mode,
       soundEnabled,
       notificationEnabled,
-      volume,
-      [name]: checked,
-    });
+    };
+    
+    onSettingsChange(newSettings);
   };
-
-  // 处理音效设置变化
-  const handleSoundSettingsChange = () => {
-    // 音效设置变化时的回调
-    console.log('Sound settings changed');
-  };
-
-  // 标签页配置
-  const tabs = [
-    { id: 'basic', name: '基础设置', icon: <Clock className="h-4 w-4" /> },
-    { id: 'sound', name: '音效管理', icon: <Volume2 className="h-4 w-4" /> },
-    { id: 'mapping', name: '音效映射', icon: <SettingsIcon className="h-4 w-4" /> },
-    { id: 'volume', name: '音量控制', icon: <Bell className="h-4 w-4" /> },
-    { id: 'theme', name: '主题选择', icon: <Palette className="h-4 w-4" /> },
-    { id: 'themeEditor', name: '主题编辑', icon: <Palette className="h-4 w-4" /> },
-    { id: 'themeManager', name: '主题管理', icon: <Palette className="h-4 w-4" /> },
-    { id: 'timerStyle', name: '计时器样式', icon: <Monitor className="h-4 w-4" /> },
-    { id: 'timerStyleEditor', name: '样式编辑', icon: <Monitor className="h-4 w-4" /> },
-    { id: 'timerStyleManager', name: '样式管理', icon: <Monitor className="h-4 w-4" /> },
-    { id: 'timerAnimation', name: '动画效果', icon: <Zap className="h-4 w-4" /> },
-    { id: 'backgroundDecoration', name: '背景装饰', icon: <Sparkles className="h-4 w-4" /> },
-    { id: 'responsive', name: '响应式适配', icon: <Monitor className="h-4 w-4" /> },
-    { id: 'test', name: '持久化测试', icon: <Play className="h-4 w-4" /> },
-  ] as const;
 
   return (
     <div className="space-y-6">
-      {/* 标签页导航 */}
-      <div className="border-b border-gray-200">
-        <nav className="flex space-x-8">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center space-x-2 py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === tab.id
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              {tab.icon}
-              <span>{tab.name}</span>
-            </button>
-          ))}
-        </nav>
-      </div>
-
-      {/* 标签页内容 */}
-      {activeTab === 'basic' && (
-        <div className="space-y-6">
-          {/* 时间设置 */}
-          <div className="space-y-4">
-            <div className="flex items-center space-x-2">
-              <Clock className="h-5 w-5 text-blue-500" />
-              <h3 className="text-lg font-semibold">时间设置</h3>
-            </div>
+      <Tabs defaultValue="general" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="general">通用设置</TabsTrigger>
+          <TabsTrigger value="classic">经典模式</TabsTrigger>
+          <TabsTrigger value="smart">智能模式</TabsTrigger>
+        </TabsList>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">
-              专注时长: {focusDuration} 分钟
-            </label>
-            <Slider
-              value={[focusDuration]}
-              onValueChange={(value) => handleSliderChange('focusDuration', value[0])}
-              max={240}
-              min={15}
-              step={5}
-              className="w-full"
-            />
-            <div className="flex justify-between text-xs text-gray-500">
-              <span>15分钟</span>
-              <span>240分钟</span>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">
-              休息时长: {breakDuration} 分钟
-            </label>
-            <Slider
-              value={[breakDuration]}
-              onValueChange={(value) => handleSliderChange('breakDuration', value[0])}
-              max={60}
-              min={5}
-              step={5}
-              className="w-full"
-            />
-            <div className="flex justify-between text-xs text-gray-500">
-              <span>5分钟</span>
-              <span>60分钟</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 微休息设置 */}
-      <div className="space-y-4">
-        <div className="flex items-center space-x-2">
-          <Clock className="h-5 w-5 text-green-500" />
-          <h3 className="text-lg font-semibold">微休息设置</h3>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">
-              最小间隔: {microBreakMinInterval} 分钟
-            </label>
-            <Slider
-              value={[microBreakMinInterval]}
-              onValueChange={(value) => handleSliderChange('microBreakMinInterval', value[0])}
-              max={55}
-              min={5}
-              step={1}
-              className="w-full"
-            />
-            <div className="flex justify-between text-xs text-gray-500">
-              <span>5分钟</span>
-              <span>55分钟</span>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">
-              最大间隔: {microBreakMaxInterval} 分钟
-            </label>
-            <Slider
-              value={[microBreakMaxInterval]}
-              onValueChange={(value) => handleSliderChange('microBreakMaxInterval', value[0])}
-              max={60}
-              min={10}
-              step={1}
-              className="w-full"
-            />
-            <div className="flex justify-between text-xs text-gray-500">
-              <span>10分钟</span>
-              <span>60分钟</span>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">
-              持续时间: {microBreakDuration} 分钟
-            </label>
-            <Slider
-              value={[microBreakDuration]}
-              onValueChange={(value) => handleSliderChange('microBreakDuration', value[0])}
-              max={10}
-              min={1}
-              step={1}
-              className="w-full"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* 音频和通知设置 */}
-      <div className="space-y-4">
-        <div className="flex items-center space-x-2">
-          <Bell className="h-5 w-5 text-purple-500" />
-          <h3 className="text-lg font-semibold">音频和通知</h3>
-        </div>
-        
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <label className="text-sm font-medium text-gray-700">启用音效</label>
-              <p className="text-xs text-gray-500">播放提示音和背景音</p>
-            </div>
-            <Switch
-              checked={soundEnabled}
-              onCheckedChange={(checked) => handleSwitchChange('soundEnabled', checked)}
-            />
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <label className="text-sm font-medium text-gray-700">桌面通知</label>
-              <p className="text-xs text-gray-500">显示系统通知提醒</p>
-            </div>
-            <Switch
-              checked={notificationEnabled}
-              onCheckedChange={(checked) => handleSwitchChange('notificationEnabled', checked)}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center space-x-2">
-              <Volume2 className="h-4 w-4 text-gray-500" />
-              <label className="text-sm font-medium text-gray-700">
-                音量: {Math.round(volume * 100)}%
-              </label>
-            </div>
-            <Slider
-              value={[volume]}
-              onValueChange={(value) => handleSliderChange('volume', value[0])}
-              max={1}
-              min={0}
-              step={0.1}
-              className="w-full"
-            />
-            <div className="flex justify-between text-xs text-gray-500">
-              <span>静音</span>
-              <span>最大</span>
-            </div>
-          </div>
-
-          {/* 音效管理 */}
-          {soundEnabled && (
-            <div className="space-y-3">
-              <h4 className="text-sm font-medium text-gray-700">音效预览</h4>
-              <div className="grid grid-cols-1 gap-2">
-                {soundTypes.map((sound) => (
-                  <div key={sound.key} className="flex items-center justify-between p-2 border rounded-lg hover:bg-gray-50">
-                    <div className="flex-1">
-                      <div className="text-sm font-medium text-gray-700">{sound.name}</div>
-                      <div className="text-xs text-gray-500">{sound.description}</div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => playSound(sound.key)}
-                      className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 hover:bg-blue-200 transition-colors"
-                      title={playingSound === sound.key ? '停止播放' : '播放预览'}
-                    >
-                      {playingSound === sound.key ? (
-                        <Pause className="h-4 w-4 text-blue-600" />
-                      ) : (
-                        <Play className="h-4 w-4 text-blue-600" />
-                      )}
-                    </button>
-                  </div>
-                ))}
-              </div>
-              <p className="text-xs text-gray-500">
-                💡 提示：点击播放按钮可以预览各种音效
-              </p>
-
-              {/* 音效管理按钮 */}
-              <div className="pt-3 border-t">
-                <button
-                  type="button"
-                  onClick={() => setShowSoundManager(!showSoundManager)}
-                  className="flex items-center space-x-2 text-sm text-blue-600 hover:text-blue-700 transition-colors"
+        <TabsContent value="general" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>通用设置</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="mode">计时器模式</Label>
+                <select 
+                  value={mode} 
+                  onChange={(e) => setMode(e.target.value as TimerMode)}
+                  className="flex h-10 w-[180px] rounded-md border border-gray-300 bg-white px-3 py-2 text-sm ring-offset-white file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-900 dark:ring-offset-gray-900 dark:placeholder:text-gray-400 dark:focus-visible:ring-blue-300"
                 >
-                  <SettingsIcon className="h-4 w-4" />
-                  <span>{showSoundManager ? '隐藏音效管理' : '管理自定义音效'}</span>
-                </button>
+                  <option value="classic">经典模式</option>
+                  <option value="smart">智能模式</option>
+                </select>
               </div>
-
-              {/* 音效管理器 */}
-              {showSoundManager && (
-                <div className="mt-4 pt-4 border-t">
-                  <SoundManager onSoundChange={() => {
-                    // 音效变更后的回调，可以用来刷新音效列表等
-                  }} />
+              
+              <div className="flex items-center justify-between">
+                <Label htmlFor="sound">音效</Label>
+                <Switch
+                  id="sound"
+                  checked={soundEnabled}
+                  onCheckedChange={setSoundEnabled}
+                />
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <Label htmlFor="notification">通知</Label>
+                <Switch
+                  id="notification"
+                  checked={notificationEnabled}
+                  onCheckedChange={setNotificationEnabled}
+                />
+              </div>
+              
+              <Button onClick={saveGeneralSettings}>保存通用设置</Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="classic" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>经典模式设置</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="focusDuration">专注时长 (分钟)</Label>
+                <Input
+                  id="focusDuration"
+                  type="number"
+                  value={focusDuration}
+                  onChange={(e) => setFocusDuration(Number(e.target.value))}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="breakDuration">休息时长 (分钟)</Label>
+                <Input
+                  id="breakDuration"
+                  type="number"
+                  value={breakDuration}
+                  onChange={(e) => setBreakDuration(Number(e.target.value))}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="microBreakDuration">微休息时长 (分钟)</Label>
+                <Input
+                  id="microBreakDuration"
+                  type="number"
+                  value={microBreakDuration}
+                  onChange={(e) => setMicroBreakDuration(Number(e.target.value))}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="microBreakMinInterval">微休息间隔 (分钟)</Label>
+                <Input
+                  id="microBreakMinInterval"
+                  type="number"
+                  value={microBreakMinInterval}
+                  onChange={(e) => setMicroBreakMinInterval(Number(e.target.value))}
+                />
+              </div>
+              
+              <Button onClick={saveClassicSettings}>保存经典模式设置</Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="smart" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>智能模式设置</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="smartFocusDuration">专注时长 (分钟)</Label>
+                <Input
+                  id="smartFocusDuration"
+                  type="number"
+                  value={smartFocusDuration}
+                  onChange={(e) => setSmartFocusDuration(Number(e.target.value))}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="smartBreakDuration">休息时长 (分钟)</Label>
+                <Input
+                  id="smartBreakDuration"
+                  type="number"
+                  value={smartBreakDuration}
+                  onChange={(e) => setSmartBreakDuration(Number(e.target.value))}
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="smartMicroBreakMinInterval">微休息最小间隔 (分钟)</Label>
+                  <Input
+                    id="smartMicroBreakMinInterval"
+                    type="number"
+                    value={smartMicroBreakMinInterval}
+                    onChange={(e) => setSmartMicroBreakMinInterval(Number(e.target.value))}
+                  />
                 </div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* 预设配置 */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold">快速配置</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <button
-            type="button"
-            onClick={() => onSettingsChange({
-              focusDuration: 25,
-              breakDuration: 5,
-              microBreakMinInterval: 5,
-              microBreakMaxInterval: 15,
-              microBreakDuration: 2,
-              soundEnabled,
-              notificationEnabled,
-              volume,
-            })}
-            className="p-3 text-left border rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            <div className="font-medium">番茄工作法</div>
-            <div className="text-sm text-gray-500">25分钟专注 + 5分钟休息</div>
-          </button>
-          
-          <button
-            type="button"
-            onClick={() => onSettingsChange({
-              focusDuration: 90,
-              breakDuration: 20,
-              microBreakMinInterval: 10,
-              microBreakMaxInterval: 30,
-              microBreakDuration: 3,
-              soundEnabled,
-              notificationEnabled,
-              volume,
-            })}
-            className="p-3 text-left border rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            <div className="font-medium">深度专注</div>
-            <div className="text-sm text-gray-500">90分钟专注 + 20分钟休息</div>
-          </button>
-          
-          <button
-            type="button"
-            onClick={() => onSettingsChange({
-              focusDuration: 45,
-              breakDuration: 15,
-              microBreakMinInterval: 8,
-              microBreakMaxInterval: 20,
-              microBreakDuration: 3,
-              soundEnabled,
-              notificationEnabled,
-              volume,
-            })}
-            className="p-3 text-left border rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            <div className="font-medium">平衡模式</div>
-            <div className="text-sm text-gray-500">45分钟专注 + 15分钟休息</div>
-          </button>
-        </div>
-      </div>
-        </div>
-      )}
-
-      {/* 音效管理标签页 */}
-      {activeTab === 'sound' && (
-        <SoundManager onSoundChange={handleSoundSettingsChange} />
-      )}
-
-      {/* 音效映射标签页 */}
-      {activeTab === 'mapping' && (
-        <SoundMappingConfig onMappingChange={handleSoundSettingsChange} />
-      )}
-
-      {/* 音量控制标签页 */}
-      {activeTab === 'volume' && (
-        <SoundVolumeControl onVolumeChange={(volume) => handleSliderChange('volume', volume)} />
-      )}
-
-      {/* 主题选择标签页 */}
-      {activeTab === 'theme' && (
-        <ThemeSelector onThemeChange={handleSoundSettingsChange} />
-      )}
-
-      {/* 主题编辑标签页 */}
-      {activeTab === 'themeEditor' && (
-        <ThemeEditor onThemeChange={handleSoundSettingsChange} />
-      )}
-
-      {/* 主题管理标签页 */}
-      {activeTab === 'themeManager' && (
-        <ThemeManager onThemeChange={handleSoundSettingsChange} />
-      )}
-
-      {/* 计时器样式标签页 */}
-      {activeTab === 'timerStyle' && (
-        <TimerStyleSelector onStyleChange={handleSoundSettingsChange} />
-      )}
-
-      {/* 计时器样式编辑标签页 */}
-      {activeTab === 'timerStyleEditor' && (
-        <TimerStyleEditor onStyleChange={handleSoundSettingsChange} />
-      )}
-
-      {/* 计时器样式管理标签页 */}
-      {activeTab === 'timerStyleManager' && (
-        <TimerStyleManager onStyleChange={handleSoundSettingsChange} />
-      )}
-
-      {/* 计时器动画效果标签页 */}
-      {activeTab === 'timerAnimation' && (
-        <TimerAnimationSettings onSettingsChange={handleSoundSettingsChange} />
-      )}
-
-      {/* 背景装饰标签页 */}
-      {activeTab === 'backgroundDecoration' && (
-        <BackgroundDecorationSettings onSettingsChange={handleSoundSettingsChange} />
-      )}
-
-      {/* 响应式适配标签页 */}
-      {activeTab === 'responsive' && (
-        <ResponsiveSettings onSettingsChange={handleSoundSettingsChange} />
-      )}
-
-      {/* 持久化测试标签页 */}
-      {activeTab === 'test' && (
-        <SoundPersistenceTest />
-      )}
+                
+                <div className="space-y-2">
+                  <Label htmlFor="smartMicroBreakMaxInterval">微休息最大间隔 (分钟)</Label>
+                  <Input
+                    id="smartMicroBreakMaxInterval"
+                    type="number"
+                    value={smartMicroBreakMaxInterval}
+                    onChange={(e) => setSmartMicroBreakMaxInterval(Number(e.target.value))}
+                  />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="smartMicroBreakMinDuration">微休息最短时长 (分钟)</Label>
+                  <Input
+                    id="smartMicroBreakMinDuration"
+                    type="number"
+                    value={smartMicroBreakMinDuration}
+                    onChange={(e) => setSmartMicroBreakMinDuration(Number(e.target.value))}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="smartMicroBreakMaxDuration">微休息最长时长 (分钟)</Label>
+                  <Input
+                    id="smartMicroBreakMaxDuration"
+                    type="number"
+                    value={smartMicroBreakMaxDuration}
+                    onChange={(e) => setSmartMicroBreakMaxDuration(Number(e.target.value))}
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="peakFocusHours">高效专注时段 (小时, 用逗号分隔)</Label>
+                <Input
+                  id="peakFocusHours"
+                  value={peakFocusHours}
+                  onChange={(e) => setPeakFocusHours(e.target.value)}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="lowEnergyHours">低能量时段 (小时, 用逗号分隔)</Label>
+                <Input
+                  id="lowEnergyHours"
+                  value={lowEnergyHours}
+                  onChange={(e) => setLowEnergyHours(e.target.value)}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="maxContinuousFocusTime">最大连续专注时间 (分钟)</Label>
+                <Input
+                  id="maxContinuousFocusTime"
+                  type="number"
+                  value={maxContinuousFocusTime}
+                  onChange={(e) => setMaxContinuousFocusTime(Number(e.target.value))}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="forcedBreakThreshold">强制休息阈值 (分钟)</Label>
+                <Input
+                  id="forcedBreakThreshold"
+                  type="number"
+                  value={forcedBreakThreshold}
+                  onChange={(e) => setForcedBreakThreshold(Number(e.target.value))}
+                />
+              </div>
+              
+              <Button onClick={saveSmartSettings}>保存智能模式设置</Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

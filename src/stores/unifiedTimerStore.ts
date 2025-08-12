@@ -13,10 +13,13 @@ import {
   UnifiedTimerStateType,
   UnifiedTimerControls,
   ModeSwitchOptions,
-  DEFAULT_UNIFIED_SETTINGS
+  DEFAULT_UNIFIED_SETTINGS,
+  ClassicTimerSettings,
+  SmartTimerSettings
 } from '../types/unifiedTimer';
-import { soundService } from '../services/sound';
-import { cryptoService } from '../services/crypto';
+import { getSoundService } from '../services/sound';
+import { getNotificationService } from '../services/notification';
+import { getDatabaseService } from '../services/database';
 
 // Store接口定义
 interface UnifiedTimerStore extends UnifiedState, UnifiedTimerControls {
@@ -34,6 +37,18 @@ interface UnifiedTimerStore extends UnifiedState, UnifiedTimerControls {
 
   // 设置管理
   settings: UnifiedTimerSettings;
+  showSettings: boolean;
+  setShowSettings: (show: boolean) => void;
+  
+  // 数据库相关
+  initializeDatabase: () => Promise<void>;
+  saveCurrentSession: () => Promise<void>;
+  loadRecentSessions: (days?: number) => Promise<void>;
+  updateSessionEfficiency: (sessionId: number, efficiency: number) => Promise<void>;
+  getDatabaseStats: () => Promise<any>;
+  
+  // 统计相关
+  updateTodayStats: (type: 'focus' | 'break' | 'microBreak', duration: number) => void;
 }
 
 // 获取初始状态
@@ -73,6 +88,7 @@ const getInitialState = (settings: UnifiedTimerSettings): Omit<UnifiedState, 'cu
     },
     showRatingDialog: false,
     pendingRatingSession: null,
+    showSettings: false,
   };
 };
 
@@ -108,6 +124,7 @@ export const useUnifiedTimerStore = create<UnifiedTimerStore>()(
         // 播放开始音效
         if (state.settings.soundEnabled) {
           const soundKey = state.currentState === 'focus' ? 'focusStart' : 'breakStart';
+          const soundService = getSoundService();
           soundService.playMapped(soundKey);
         }
       }),
@@ -120,6 +137,11 @@ export const useUnifiedTimerStore = create<UnifiedTimerStore>()(
         const newState = getInitialState(state.settings);
         Object.assign(state, newState);
         state.currentMode = state.settings.mode;
+      }),
+      
+      // 设置对话框控制
+      setShowSettings: (show: boolean) => set((state) => {
+        state.showSettings = show;
       }),
       
       // 模式切换
@@ -197,193 +219,274 @@ export const useUnifiedTimerStore = create<UnifiedTimerStore>()(
             }
             break;
           case 'microBreak':
-            const duration = state.currentMode === TimerMode.SMART
-              ? cryptoService.generateMicroBreakDuration(
-                  state.settings.smart.microBreakMinDuration,
-                  state.settings.smart.microBreakMaxDuration
-                )
-              : state.settings.classic.microBreakDuration * 60;
-            state.timeLeft = duration;
-            state.totalTime = duration;
-            break;
-          case 'forcedBreak':
-            // 只在智能模式下可用
-            if (state.currentMode === TimerMode.SMART) {
-              const breakDuration = Math.max(state.settings.smart.breakDuration, 30);
-              state.timeLeft = breakDuration * 60;
-              state.totalTime = breakDuration * 60;
+            {
+              // 设置微休息时长（根据模式确定）
+              let microBreakDuration;
+              if (state.currentMode === TimerMode.CLASSIC) {
+                microBreakDuration = (currentSettings as ClassicTimerSettings).microBreakDuration * 60;
+              } else {
+                const smartSettings = currentSettings as SmartTimerSettings;
+                microBreakDuration = Math.floor(
+                  Math.random() * (
+                    smartSettings.microBreakMaxDuration - smartSettings.microBreakMinDuration + 1
+                  ) + smartSettings.microBreakMinDuration
+                ) * 60;
+              }
+              
+              state.timeLeft = microBreakDuration;
+              state.totalTime = microBreakDuration;
+              
+              // 记录微休息开始时间
+              state.lastMicroBreakTime = Date.now();
+              state.microBreakCount += 1;
             }
             break;
         }
         
-        // 播放状态切换音效
+        // 播放状态转换音效
         if (state.settings.soundEnabled) {
-          soundService.playMapped('stateChange');
+          const soundService = getSoundService();
+          soundService.playMapped(`${newState}Start`);
         }
       }),
       
-      // 时间更新
-      updateTimeLeft: (timeLeft: number) => set((state) => {
-        state.timeLeft = Math.max(0, timeLeft);
-        
-        // 时间到了，处理状态转换
-        if (state.timeLeft === 0) {
-          get().handleTimeUp();
-        }
-      }),
-      
-      // 处理时间到
-      handleTimeUp: () => {
-        const state = get();
+      // 跳转到下一状态
+      skipToNext: () => set((state) => {
+        const currentSettings = state.currentMode === TimerMode.CLASSIC 
+          ? state.settings.classic 
+          : state.settings.smart;
         
         switch (state.currentState) {
           case 'focus':
-            // 智能模式可能需要检查强制休息
-            if (state.currentMode === TimerMode.SMART) {
-              const shouldForceBreak = state.continuousFocusTime >= state.settings.smart.forcedBreakThreshold;
-              get().transitionTo(shouldForceBreak ? 'forcedBreak' : 'break');
-            } else {
-              get().transitionTo('break');
-            }
+            get().transitionTo('break');
             break;
           case 'break':
-          case 'forcedBreak':
+            get().transitionTo('focus');
+            break;
+          case 'microBreak':
+            get().transitionTo('focus');
+            break;
+          default:
+            // 默认回到专注状态
+            state.currentState = 'focus';
+            state.timeLeft = currentSettings.focusDuration * 60;
+            state.totalTime = currentSettings.focusDuration * 60;
+        }
+        
+        // 重置活动状态
+        state.isActive = false;
+      }),
+      
+      // 触发微休息
+      triggerMicroBreak: () => set((state) => {
+        // 切换到微休息状态
+        get().transitionTo('microBreak');
+        
+        // 发送通知
+        if (state.settings.notificationEnabled) {
+          const notificationService = getNotificationService();
+          notificationService.sendNotification(
+            '微休息时间',
+            '短暂休息一下，保持专注力'
+          );
+        }
+      }),
+      
+      // 更新设置
+      updateSettings: (newSettings: Partial<UnifiedTimerSettings>) => set((state) => {
+        Object.assign(state.settings, newSettings);
+      }),
+      
+      // 更新剩余时间
+      updateTimeLeft: (timeLeft: number) => set((state) => {
+        state.timeLeft = timeLeft;
+      }),
+      
+      // 调度下次微休息
+      scheduleNextMicroBreak: () => set((state) => {
+        const currentSettings = state.currentMode === TimerMode.CLASSIC 
+          ? state.settings.classic 
+          : state.settings.smart;
+        
+        // 生成随机间隔（秒）
+        let minInterval, maxInterval;
+        if (state.currentMode === TimerMode.CLASSIC) {
+          const classicSettings = currentSettings as ClassicTimerSettings;
+          minInterval = classicSettings.microBreakMinInterval * 60;
+          maxInterval = minInterval;
+        } else {
+          const smartSettings = currentSettings as SmartTimerSettings;
+          minInterval = smartSettings.microBreakMinInterval * 60;
+          maxInterval = smartSettings.microBreakMaxInterval * 60;
+        }
+        
+        // 使用 Math.random 生成随机数
+        state.nextMicroBreakInterval = Math.floor(Math.random() * (maxInterval - minInterval + 1)) + minInterval;
+      }),
+      
+      // 检查是否触发微休息
+      checkMicroBreakTrigger: () => {
+        const state = get();
+        if (!state.isActive || state.currentState !== 'focus') return false;
+        
+        const now = Date.now();
+        const elapsed = Math.floor((now - state.focusStartTime) / 1000);
+        
+        return elapsed >= state.nextMicroBreakInterval;
+      },
+      
+      // 处理时间结束
+      handleTimeUp: () => set((state) => {
+        switch (state.currentState) {
+          case 'focus':
+            get().transitionTo('break');
+            break;
+          case 'break':
             get().transitionTo('focus');
             break;
           case 'microBreak':
             get().transitionTo('focus');
             break;
         }
-      },
-      
-      // 跳转到下一阶段
-      skipToNext: () => {
-        get().handleTimeUp();
-      },
-      
-      // 触发微休息
-      triggerMicroBreak: () => set((state) => {
-        if (state.currentState === 'focus') {
-          get().transitionTo('microBreak');
-          state.microBreakCount++;
-          state.lastMicroBreakTime = Date.now() - state.focusStartTime;
-          get().scheduleNextMicroBreak();
-        }
       }),
       
-      // 调度下次微休息
-      scheduleNextMicroBreak: () => set((state) => {
-        const settings = state.currentMode === TimerMode.CLASSIC 
-          ? state.settings.classic 
-          : state.settings.smart;
-        
-        const minInterval = settings.microBreakMinInterval * 60; // 转换为秒
-        const maxInterval = settings.microBreakMaxInterval * 60;
-        
-        state.nextMicroBreakInterval = cryptoService.generateRandomInt(minInterval, maxInterval);
+      // 显示效率评分
+      showEfficiencyRating: (session) => set((state) => {
+        state.showRatingDialog = true;
+        state.pendingRatingSession = session;
       }),
       
-      // 检查是否应该触发微休息
-      checkMicroBreakTrigger: () => {
-        const state = get();
-        if (!state.isActive || state.currentState !== 'focus') return false;
-        
-        const currentTime = Date.now();
-        const focusElapsed = Math.floor((currentTime - state.focusStartTime) / 1000);
-        
-        return cryptoService.shouldTriggerMicroBreak(
-          focusElapsed,
-          state.lastMicroBreakTime,
-          state.nextMicroBreakInterval
-        );
-      },
-      
-      // 设置更新
-      updateSettings: (newSettings: Partial<UnifiedTimerSettings>) => set((state) => {
-        state.settings = { ...state.settings, ...newSettings };
-        
-        // 如果模式改变，需要重新初始化
-        if (newSettings.mode && newSettings.mode !== state.currentMode) {
-          get().switchMode(newSettings.mode);
-        }
-        
-        get().saveToStorage();
-      }),
-      
-      // 效率评分
-      submitEfficiencyRating: (score: number) => set((state) => {
-        if (state.pendingRatingSession) {
-          // 更新效率评分
-          state.recentEfficiencyScores.push(score);
-          
-          // 只保留最近10次评分
-          if (state.recentEfficiencyScores.length > 10) {
-            state.recentEfficiencyScores.shift();
-          }
-          
-          // 智能模式的自适应调整
-          if (state.currentMode === TimerMode.SMART && state.settings.smart.enableAdaptiveAdjustment) {
-            // 这里可以添加自适应调整逻辑
-            const avgScore = state.recentEfficiencyScores.reduce((a, b) => a + b, 0) / state.recentEfficiencyScores.length;
-            if (avgScore < 3) {
-              state.adaptiveAdjustments.focusMultiplier = Math.max(0.8, state.adaptiveAdjustments.focusMultiplier - 0.1);
-            } else if (avgScore > 4) {
-              state.adaptiveAdjustments.focusMultiplier = Math.min(1.2, state.adaptiveAdjustments.focusMultiplier + 0.1);
-            }
-          }
-          
-          state.showRatingDialog = false;
-          state.pendingRatingSession = null;
-        }
-      }),
-      
+      // 隐藏效率评分
       hideEfficiencyRating: () => set((state) => {
         state.showRatingDialog = false;
         state.pendingRatingSession = null;
       }),
       
-      showEfficiencyRating: (session: { duration: number; type: UnifiedTimerStateType; sessionId?: number }) => set((state) => {
-        state.showRatingDialog = true;
-        state.pendingRatingSession = session;
+      // 提交效率评分
+      submitEfficiencyRating: (score: number) => set((state) => {
+        state.showRatingDialog = false;
+        state.pendingRatingSession = null;
+        state.recentEfficiencyScores.push(score);
+        // 保持最近5个评分
+        if (state.recentEfficiencyScores.length > 5) {
+          state.recentEfficiencyScores.shift();
+        }
       }),
       
-      // 数据持久化
+      // 更新今日统计数据
+      updateTodayStats: (type: 'focus' | 'break' | 'microBreak', duration: number) => 
+        set((state) => {
+          switch (type) {
+            case 'focus':
+              state.todayStats.focusTime += duration;
+              break;
+            case 'break':
+              state.todayStats.breakTime += duration;
+              break;
+            case 'microBreak':
+              state.todayStats.microBreaks += 1;
+              break;
+          }
+          
+          // 更新效率评分
+          const totalFocusTime = state.todayStats.focusTime;
+          const totalBreakTime = state.todayStats.breakTime;
+          if (totalFocusTime > 0) {
+            state.todayStats.efficiency = Math.round(
+              (totalFocusTime / (totalFocusTime + totalBreakTime)) * 100
+            );
+          }
+        }),
+      
+      // 数据库相关方法
+      initializeDatabase: async () => {
+        const dbService = getDatabaseService();
+        await dbService.initialize();
+      },
+      
+      saveCurrentSession: async () => {
+        // 实现保存当前会话的逻辑
+        console.log('Saving current session...');
+      },
+      
+      loadRecentSessions: async (days?: number) => {
+        // 实现加载最近会话的逻辑
+        console.log(`Loading sessions for last ${days || 7} days...`);
+      },
+      
+      updateSessionEfficiency: async (sessionId: number, efficiency: number) => {
+        // 实现更新会话效率的逻辑
+        console.log(`Updating session ${sessionId} efficiency to ${efficiency}`);
+      },
+      
+      getDatabaseStats: async () => {
+        // 实现获取数据库统计的逻辑
+        console.log('Getting database stats...');
+        return {};
+      },
+      
+      // 数据持久化方法
       saveToStorage: async () => {
         try {
-          const state = get();
+          // 保存设置到localStorage
+          const { settings, currentMode, todayStats } = get();
           const dataToSave = {
-            settings: state.settings,
-            currentMode: state.currentMode,
-            todayStats: state.todayStats,
-            recentEfficiencyScores: state.recentEfficiencyScores,
-            adaptiveAdjustments: state.adaptiveAdjustments,
+            settings,
+            currentMode,
+            todayStats,
+            savedAt: Date.now()
           };
-          localStorage.setItem('unified-timer-data', JSON.stringify(dataToSave));
+          localStorage.setItem('focusflow-timer-data', JSON.stringify(dataToSave));
+          console.log('Settings saved to storage');
         } catch (error) {
-          console.error('Failed to save timer data:', error);
+          console.error('Failed to save settings to storage:', error);
         }
       },
       
       loadFromStorage: async () => {
         try {
-          const saved = localStorage.getItem('unified-timer-data');
-          if (saved) {
-            const data = JSON.parse(saved);
+          // 从localStorage加载设置
+          const savedData = localStorage.getItem('focusflow-timer-data');
+          if (savedData) {
+            const parsedData = JSON.parse(savedData);
+
+            // 验证数据是否过期（超过7天）
+            const isDataExpired = parsedData.savedAt && 
+              (Date.now() - parsedData.savedAt) > 7 * 24 * 60 * 60 * 1000;
+
+            if (!isDataExpired) {
+              // 应用加载的设置
+              set((state) => {
+                state.settings = { ...state.settings, ...parsedData.settings };
+                state.currentMode = parsedData.currentMode || state.currentMode;
+                state.todayStats = { ...state.todayStats, ...parsedData.todayStats };
+              });
+              console.log('Settings loaded from storage');
+            } else {
+              console.log('Saved data is expired, using defaults');
+            }
+          }
+
+          // 初始化数据库
+          await get().initializeDatabase();
+
+          // 加载今日统计数据
+          const today = new Date().toISOString().split('T')[0];
+          const dbService = getDatabaseService();
+          const todayStats = await dbService.getDailyStats(today);
+
+          if (todayStats) {
             set((state) => {
-              if (data.settings) state.settings = { ...DEFAULT_UNIFIED_SETTINGS, ...data.settings };
-              if (data.currentMode) state.currentMode = data.currentMode;
-              if (data.todayStats) state.todayStats = data.todayStats;
-              if (data.recentEfficiencyScores) state.recentEfficiencyScores = data.recentEfficiencyScores;
-              if (data.adaptiveAdjustments) state.adaptiveAdjustments = data.adaptiveAdjustments;
+              state.todayStats.focusTime = todayStats.total_focus_time;
+              state.todayStats.breakTime = todayStats.total_break_time;
+              state.todayStats.microBreaks = todayStats.total_micro_breaks;
+              state.todayStats.efficiency = todayStats.average_efficiency;
             });
           }
         } catch (error) {
-          console.error('Failed to load timer data:', error);
+          console.error('Failed to load settings from storage:', error);
         }
       },
     }))
   )
 );
-
-// 初始化数据加载
-useUnifiedTimerStore.getState().loadFromStorage();

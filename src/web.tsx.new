@@ -1,0 +1,44 @@
+import * as React from 'react';
+import { createRoot } from 'react-dom/client';
+import { BrowserRouter } from 'react-router-dom';
+import AppRouter from './Router';
+import './index.css';
+
+// Web应用入口组件
+const WebApp: React.FC = () => {
+  const [isInitialized, setIsInitialized] = React.useState(false);
+
+  // 初始化
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsInitialized(true);
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (!isInitialized) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-900 dark:to-gray-800">
+        <div className="text-center">
+          <div className="mb-4 text-6xl animate-pulse">🍅</div>
+          <div className="text-2xl font-semibold text-gray-700 dark:text-gray-300">FocusFlow 启动中...</div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <BrowserRouter>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
+        <AppRouter />
+      </div>
+    </BrowserRouter>
+  );
+};
+
+// 渲染应用
+const container = document.getElementById('root');
+if (!container) throw new Error('Failed to find the root element');
+const root = createRoot(container);
+root.render(<WebApp />);

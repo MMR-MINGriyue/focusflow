@@ -10,6 +10,32 @@ import { Button } from '../ui/Button';
 import { Progress } from '../ui/Progress';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/Dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/Tooltip';
+import { useConfirmDialog } from '../ui/ConfirmDialog';
+
+// 由于Card组件存在问题，这里使用HTML元素模拟
+const Card: React.FC<{ className?: string; children: React.ReactNode }> = ({ className = '', children }) => (
+  <div className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm ${className}`}>
+    {children}
+  </div>
+);
+
+const CardHeader: React.FC<{ className?: string; children: React.ReactNode }> = ({ className = '', children }) => (
+  <div className={`p-6 pb-2 ${className}`}>
+    {children}
+  </div>
+);
+
+const CardTitle: React.FC<{ className?: string; children: React.ReactNode }> = ({ className = '', children }) => (
+  <h3 className={`text-lg font-semibold leading-none tracking-tight ${className}`}>
+    {children}
+  </h3>
+);
+
+const CardContent: React.FC<{ className?: string; children: React.ReactNode }> = ({ className = '', children }) => (
+  <div className={`p-6 pt-2 ${className}`}>
+    {children}
+  </div>
+);
 import { 
   Play, 
   Pause, 
@@ -31,11 +57,14 @@ interface UnifiedTimerProps {
   className?: string;
 }
 
-const UnifiedTimer: React.FC<UnifiedTimerProps> = ({ 
-  onStateChange, 
-  className = '' 
+const UnifiedTimer: React.FC<UnifiedTimerProps> = ({
+  onStateChange,
+  className = ''
 }) => {
   const [showSettings, setShowSettings] = useState(false);
+
+  // 确认对话框Hook
+  const { showConfirmDialog, ConfirmDialog } = useConfirmDialog();
 
   // 启动计时器逻辑Hook
   useUnifiedTimer();
@@ -100,8 +129,6 @@ const UnifiedTimer: React.FC<UnifiedTimerProps> = ({
     return ((totalTime - timeLeft) / totalTime) * 100;
   }, [timeLeft, totalTime]);
 
-
-
   // 计时器控制函数（包装错误处理）
   const toggleTimer = wrapFunction(() => {
     if (isActive) {
@@ -112,7 +139,27 @@ const UnifiedTimer: React.FC<UnifiedTimerProps> = ({
   }, { component: 'UnifiedTimer', action: 'toggleTimer' });
 
   const handleReset = wrapFunction(() => {
-    reset();
+    // 如果计时器正在运行或有进度，显示确认对话框
+    if (isActive || timeLeft < totalTime) {
+      const progressLost = totalTime - timeLeft;
+      const progressMinutes = Math.floor(progressLost / 60);
+      const progressText = progressMinutes > 0 ? `${progressMinutes}分钟` : '少量';
+
+      showConfirmDialog(
+        `确定要重置计时器吗？\n\n当前进度：${progressText}的专注时间将会丢失。\n此操作无法撤销。`,
+        () => {
+          reset();
+        },
+        {
+          type: 'warning',
+          confirmText: '重置',
+          confirmDanger: true
+        }
+      );
+    } else {
+      // 没有进度时直接重置
+      reset();
+    }
   }, { component: 'UnifiedTimer', action: 'resetTimer' });
 
   const handleSkip = wrapFunction(() => {
@@ -162,161 +209,172 @@ const UnifiedTimer: React.FC<UnifiedTimerProps> = ({
   return (
     <TooltipProvider>
       <div className={`space-y-6 ${className}`}>
-        {/* 模式选择器 */}
-        {settings.showModeSelector && (
-          <div className="flex justify-center">
-            <ModeSelector
-              currentMode={currentMode}
-              isActive={isActive}
-              onModeChange={handleModeChange}
-              variant="tabs"
-              showDescription={false}
-            />
-          </div>
-        )}
-
-        {/* 主计时器显示区域 */}
-        <div className="flex flex-col items-center justify-center space-y-6">
-          <TimerDisplay
-            time={timeLeft}
-            formattedTime={formattedTime}
-            currentState={currentState as any}
-            progress={progress}
-            isActive={isActive}
-            stateText={stateText}
-            className="timer-main-display"
-          />
-
-          {/* 备用进度条 */}
-          <div className="w-full max-w-md">
-            <Progress
-              value={progress}
-              className="h-2 opacity-50"
-              indicatorClassName={
-                currentState === 'focus' ? 'bg-green-500' :
-                currentState === 'break' ? 'bg-red-500' : 
-                currentState === 'microBreak' ? 'bg-yellow-500' : 'bg-red-600'
-              }
-            />
-          </div>
-
-          {/* 控制按钮 */}
-          <div className="flex items-center space-x-3" data-tour="timer-controls">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  onClick={toggleTimer}
-                  size="lg"
-                  variant={isActive ? "secondary" : "default"}
-                  className="flex items-center space-x-2"
-                >
-                  {isActive ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
-                  <span>{isActive ? "暂停" : "开始"}</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{isActive ? "暂停计时器" : "开始专注会话"}</p>
-              </TooltipContent>
-            </Tooltip>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  onClick={handleReset}
-                  size="lg"
-                  variant="outline"
-                  className="flex items-center space-x-2"
-                >
-                  <RotateCcw className="h-5 w-5" />
-                  <span>重置</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>重置计时器到初始状态</p>
-              </TooltipContent>
-            </Tooltip>
-
-            {/* 智能模式特有的跳过按钮 */}
-            {currentMode === TimerMode.SMART && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    onClick={handleSkip}
-                    size="lg"
-                    variant="outline"
-                    className="flex items-center space-x-2"
-                  >
-                    <SkipForward className="h-5 w-5" />
-                    <span>跳过</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>跳过当前阶段</p>
-                </TooltipContent>
-              </Tooltip>
+        {/* 主容器使用Card组件 */}
+        <Card className="w-full max-w-md mx-auto">
+          <CardHeader>
+            <CardTitle className="text-center">{stateText}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* 模式选择器 */}
+            {settings.showModeSelector && (
+              <div className="flex justify-center">
+                <ModeSelector
+                  currentMode={currentMode}
+                  isActive={isActive}
+                  onModeChange={handleModeChange}
+                  variant="tabs"
+                  showDescription={false}
+                />
+              </div>
             )}
 
-            <Dialog open={showSettings} onOpenChange={setShowSettings}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    onClick={() => setShowSettings(true)}
-                    size="lg"
-                    variant="ghost"
-                    className="flex items-center space-x-2"
-                  >
-                    <SettingsIcon className="h-5 w-5" />
-                    <span>设置</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>打开计时器设置</p>
-                </TooltipContent>
-              </Tooltip>
-            </Dialog>
-          </div>
-        </div>
+            {/* 主计时器显示区域 */}
+            <div className="flex flex-col items-center justify-center space-y-6">
+              <TimerDisplay
+                time={timeLeft}
+                formattedTime={formattedTime}
+                currentState={currentState as 'focus' | 'break' | 'microBreak'}
+                progress={progress}
+                isActive={isActive}
+                stateText={stateText}
+                className="timer-main-display"
+              />
 
-        {/* 模式特定信息显示 */}
-        <div className="bg-card border border-border rounded-lg p-4">
-          <div className="flex items-center space-x-2 mb-3">
-            {modeInfo.icon}
-            <span className="font-medium text-card-foreground">
-              {currentMode === TimerMode.SMART ? '智能模式状态' : '经典模式统计'}
-            </span>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
-            {modeInfo.features.map((feature, index) => (
-              <div key={index} className="text-muted-foreground">
-                {feature}
+              {/* 备用进度条 */}
+              <div className="w-full max-w-md">
+                <Progress
+                  value={progress}
+                  className="h-2 opacity-50"
+                  indicatorClassName={
+                    currentState === 'focus' ? 'bg-green-500' :
+                    currentState === 'break' ? 'bg-red-500' : 
+                    currentState === 'microBreak' ? 'bg-yellow-500' : 'bg-red-600'
+                  }
+                />
               </div>
-            ))}
-          </div>
-        </div>
 
-        {/* 设置对话框 */}
-        <Dialog open={showSettings} onOpenChange={setShowSettings}>
-          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>计时器设置</DialogTitle>
-            </DialogHeader>
-            <UnifiedSettings
-              settings={settings}
-              onSettingsChange={handleSettingsChange}
-            />
-          </DialogContent>
-        </Dialog>
+              {/* 控制按钮 */}
+              <div className="flex items-center space-x-3" data-tour="timer-controls">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={toggleTimer}
+                      size="lg"
+                      variant={isActive ? "secondary" : "default"}
+                      className="flex items-center space-x-2"
+                    >
+                      {isActive ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+                      <span>{isActive ? "暂停" : "开始"}</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{isActive ? "暂停计时器" : "开始专注会话"}</p>
+                  </TooltipContent>
+                </Tooltip>
 
-        {/* 效率评分对话框 */}
-        {showRatingDialog && pendingRatingSession && (
-          <EfficiencyRating
-            isOpen={showRatingDialog}
-            onClose={hideEfficiencyRating}
-            onSubmit={submitEfficiencyRating}
-            duration={pendingRatingSession.duration}
-            type={pendingRatingSession.type}
-          />
-        )}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={handleReset}
+                      size="lg"
+                      variant="outline"
+                      className="flex items-center space-x-2"
+                    >
+                      <RotateCcw className="h-5 w-5" />
+                      <span>重置</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>重置计时器到初始状态</p>
+                  </TooltipContent>
+                </Tooltip>
+
+                {/* 智能模式特有的跳过按钮 */}
+                {currentMode === TimerMode.SMART && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        onClick={handleSkip}
+                        size="lg"
+                        variant="outline"
+                        className="flex items-center space-x-2"
+                      >
+                        <SkipForward className="h-5 w-5" />
+                        <span>跳过</span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>跳过当前阶段</p>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+
+                <Dialog open={showSettings} onOpenChange={setShowSettings}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        onClick={() => setShowSettings(true)}
+                        size="lg"
+                        variant="ghost"
+                        className="flex items-center space-x-2"
+                      >
+                        <SettingsIcon className="h-5 w-5" />
+                        <span>设置</span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>打开计时器设置</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </Dialog>
+              </div>
+            </div>
+
+            {/* 模式特定信息显示 */}
+            <div className="bg-card border border-border rounded-lg p-4">
+              <div className="flex items-center space-x-2 mb-3">
+                {modeInfo.icon}
+                <span className="font-medium text-card-foreground">
+                  {currentMode === TimerMode.SMART ? '智能模式状态' : '经典模式统计'}
+                </span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
+                {modeInfo.features.map((feature, index) => (
+                  <div key={index} className="text-muted-foreground">
+                    {feature}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 设置对话框 */}
+            <Dialog open={showSettings} onOpenChange={setShowSettings}>
+              <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>计时器设置</DialogTitle>
+                </DialogHeader>
+                <UnifiedSettings
+                  settings={settings}
+                  onSettingsChange={handleSettingsChange}
+                />
+              </DialogContent>
+            </Dialog>
+
+            {/* 效率评分对话框 */}
+            {showRatingDialog && pendingRatingSession && (
+              <EfficiencyRating
+                isOpen={showRatingDialog}
+                onClose={hideEfficiencyRating}
+                onSubmit={submitEfficiencyRating}
+                duration={pendingRatingSession.duration}
+                type={pendingRatingSession.type}
+              />
+            )}
+
+            {/* 确认对话框 */}
+            <ConfirmDialog />
+          </CardContent>
+        </Card>
       </div>
     </TooltipProvider>
   );

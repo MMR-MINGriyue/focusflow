@@ -1,0 +1,119 @@
+{
+  "summary": {
+    "total": 15,
+    "passed": 12,
+    "failed": 0,
+    "warnings": 1,
+    "skipped": 2
+  },
+  "timestamp": "2025-07-14T03:48:19.170Z",
+  "platform": "win32",
+  "nodeVersion": "v20.19.2",
+  "results": [
+    {
+      "test": "可执行文件存在性",
+      "status": "PASS",
+      "message": "可执行文件存在",
+      "details": "D:\\Git proj\\Random\\src-tauri\\target\\release\\FocusFlow.exe",
+      "timestamp": "2025-07-14T03:48:14.060Z"
+    },
+    {
+      "test": "文件权限检查",
+      "status": "PASS",
+      "message": "文件可读取",
+      "details": "大小: 3.31 MB",
+      "timestamp": "2025-07-14T03:48:14.062Z"
+    },
+    {
+      "test": "安装包存在性",
+      "status": "PASS",
+      "message": "MSI安装包存在",
+      "details": "大小: 1.83 MB",
+      "timestamp": "2025-07-14T03:48:14.063Z"
+    },
+    {
+      "test": "应用数据目录访问",
+      "status": "PASS",
+      "message": "可以读写应用数据目录",
+      "details": "C:\\Users\\Mr.Ma\\AppData\\Roaming\\FocusFlow",
+      "timestamp": "2025-07-14T03:48:14.067Z"
+    },
+    {
+      "test": "系统通知测试",
+      "status": "PASS",
+      "message": "系统通知功能可用",
+      "details": null,
+      "timestamp": "2025-07-14T03:48:14.366Z"
+    },
+    {
+      "test": "应用启动",
+      "status": "PASS",
+      "message": "应用成功启动",
+      "details": "PID: 21544",
+      "timestamp": "2025-07-14T03:48:17.114Z"
+    },
+    {
+      "test": "全局快捷键配置",
+      "status": "PASS",
+      "message": "Ctrl+Shift+F 快捷键已配置",
+      "details": null,
+      "timestamp": "2025-07-14T03:48:17.115Z"
+    },
+    {
+      "test": "窗口阴影效果",
+      "status": "PASS",
+      "message": "窗口阴影效果已启用",
+      "details": null,
+      "timestamp": "2025-07-14T03:48:17.115Z"
+    },
+    {
+      "test": "应用关闭",
+      "status": "WARN",
+      "message": "应用关闭可能有问题",
+      "details": "kill ESRCH",
+      "timestamp": "2025-07-14T03:48:17.119Z"
+    },
+    {
+      "test": "系统托盘支持",
+      "status": "PASS",
+      "message": "系统托盘功能已配置",
+      "details": null,
+      "timestamp": "2025-07-14T03:48:17.139Z"
+    },
+    {
+      "test": "文件关联",
+      "status": "SKIP",
+      "message": "文件关联未配置（可选功能）",
+      "details": null,
+      "timestamp": "2025-07-14T03:48:17.139Z"
+    },
+    {
+      "test": "开机启动",
+      "status": "SKIP",
+      "message": "开机启动未配置（可选功能）",
+      "details": null,
+      "timestamp": "2025-07-14T03:48:17.139Z"
+    },
+    {
+      "test": "注册表访问",
+      "status": "PASS",
+      "message": "应用未在注册表中注册（正常）",
+      "details": null,
+      "timestamp": "2025-07-14T03:48:17.178Z"
+    },
+    {
+      "test": "启动时间",
+      "status": "PASS",
+      "message": "应用启动时间: 2029ms",
+      "details": "启动速度良好",
+      "timestamp": "2025-07-14T03:48:19.169Z"
+    },
+    {
+      "test": "文件大小",
+      "status": "PASS",
+      "message": "可执行文件大小: 3.31 MB",
+      "details": "文件大小合理",
+      "timestamp": "2025-07-14T03:48:19.169Z"
+    }
+  ]
+}

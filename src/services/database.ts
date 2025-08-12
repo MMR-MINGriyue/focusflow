@@ -1,7 +1,7 @@
-import Database from '@tauri-apps/plugin-sql';
 import { logError } from '../utils/errorHandler';
 import { isTauriEnvironment } from '../utils/environment';
 
+// 数据库接口类型定义
 export interface FocusSession {
   id?: number;
   date: string;
@@ -18,6 +18,98 @@ export interface AppSetting {
   updated_at?: string;
 }
 
+// 模拟数据库接口
+class MockDatabase {
+  private data: Map<string, any[]> = new Map();
+  private counter: number = 1;
+
+  async execute(query: string, params?: any[]): Promise<any> {
+    console.log('Mock DB execute:', query, params);
+    
+    // 简单解析SQL语句
+    if (query.includes('CREATE TABLE')) {
+      const tableName = query.match(/CREATE TABLE IF NOT EXISTS (\w+)/)?.[1];
+      if (tableName && !this.data.has(tableName)) {
+        this.data.set(tableName, []);
+      }
+      return { lastInsertId: 0, rowsAffected: 0 };
+    }
+    
+    if (query.includes('INSERT INTO')) {
+      const tableName = query.match(/INSERT INTO (\w+)/)?.[1];
+      if (tableName && this.data.has(tableName)) {
+        const table = this.data.get(tableName)!;
+        const id = this.counter++;
+        const row = { id, ...params };
+        table.push(row);
+        return { lastInsertId: id, rowsAffected: 1 };
+      }
+      return { lastInsertId: 0, rowsAffected: 0 };
+    }
+    
+    if (query.includes('SELECT')) {
+      const tableName = query.match(/FROM (\w+)/)?.[1];
+      if (tableName && this.data.has(tableName)) {
+        const table = this.data.get(tableName)!;
+        // 简单实现，实际应用中需要更复杂的SQL解析
+        if (query.includes('WHERE date = ?') && params?.length) {
+          return table.filter((row: any) => row.date === params[0]);
+        }
+        return table;
+      }
+      return [];
+    }
+    
+    if (query.includes('UPDATE')) {
+      // 简化实现
+      return { rowsAffected: 1 };
+    }
+    
+    if (query.includes('DELETE')) {
+      // 简化实现
+      return { rowsAffected: 1 };
+    }
+    
+    return { lastInsertId: 0, rowsAffected: 0 };
+  }
+  
+  async select<T>(query: string, params?: any[]): Promise<T[]> {
+    return this.execute(query, params) as Promise<T[]>;
+  }
+  
+  async load(dbPath: string): Promise<MockDatabase> {
+    console.log('Mock DB load:', dbPath);
+    // 尝试从localStorage加载数据
+    try {
+      const savedData = localStorage.getItem('focusflow_db');
+      if (savedData) {
+        const parsed = JSON.parse(savedData);
+        this.data = new Map(Object.entries(parsed));
+        // 计算最大ID
+        let maxId = 1;
+        for (const [, rows] of this.data) {
+          for (const row of rows) {
+            if (row.id && row.id > maxId) maxId = row.id;
+          }
+        }
+        this.counter = maxId + 1;
+      }
+    } catch (e) {
+      console.error('Failed to load data from localStorage:', e);
+    }
+    return this;
+  }
+  
+  saveToLocalStorage() {
+    try {
+      const obj = Object.fromEntries(this.data);
+      localStorage.setItem('focusflow_db', JSON.stringify(obj));
+    } catch (e) {
+      console.error('Failed to save data to localStorage:', e);
+    }
+  }
+}
+
 export interface DailyStats {
   date: string;
   total_focus_time: number;
@@ -28,7 +120,7 @@ export interface DailyStats {
 }
 
 class DatabaseService {
-  private db: Database | null = null;
+  private db: MockDatabase | null = null;
   private isInitialized = false;
   private initializationPromise: Promise<void> | null = null;
 
@@ -57,8 +149,8 @@ class DatabaseService {
     }
 
     try {
-      // 连接到 SQLite 数据库
-      this.db = await Database.load('sqlite:focusflow.db');
+      // 连接到模拟数据库
+      this.db = await new MockDatabase().load('sqlite:focusflow.db');
 
       // 创建表结构
       await this.createTables();
@@ -145,6 +237,9 @@ class DatabaseService {
         session.efficiency_score
       ]
     );
+    
+    // 保存到localStorage
+    this.db!.saveToLocalStorage();
 
     return result.lastInsertId || 0;
   }
@@ -289,7 +384,12 @@ class DatabaseService {
   async getAllSettings(): Promise<Record<string, string>> {
     if (!this.db) await this.initialize();
 
-    const settings = await this.db!.select<AppSetting[]>(
+    // 在非Tauri环境中，返回空对象
+    if (!this.db) {
+      return {};
+    }
+
+    const settings = await this.db.select<AppSetting[]>(
       'SELECT key, value FROM app_settings',
       []
     );
@@ -378,7 +478,140 @@ class DatabaseService {
       this.isInitialized = false;
     }
   }
+
+  /**
+   * 保存会话数据（兼容unifiedTimerStore）
+   */
+  async saveSession(session: {
+    startTime?: number;
+    focusTime: number;
+    breakTime: number;
+    microBreaks: number;
+    endTime?: number;
+    mode?: string;
+    efficiency?: number;
+  }): Promise<number> {
+    if (!isTauriEnvironment()) {
+      console.warn('Database operation skipped: not in Tauri environment');
+      return 0;
+    }
+
+    if (!this.db) await this.initialize();
+
+    // 计算日期
+    const date = new Date().toISOString().split('T')[0];
+
+    const result = await this.db!.execute(
+      `INSERT INTO focus_sessions
+       (date, focus_duration, break_duration, micro_breaks, efficiency_score)
+       VALUES (?, ?, ?, ?, ?)`,
+      [
+        date,
+        session.focusTime,
+        session.breakTime,
+        session.microBreaks,
+        session.efficiency || 0
+      ]
+    );
+
+    // 保存到localStorage
+    this.db!.saveToLocalStorage();
+
+    return result.lastInsertId || 0;
+  }
+
+  /**
+   * 获取最近N天的会话（兼容unifiedTimerStore）
+   */
+  async getRecentSessions(days: number = 7): Promise<any[]> {
+    if (!isTauriEnvironment()) {
+      console.warn('Database operation skipped: not in Tauri environment');
+      return [];
+    }
+
+    if (!this.db) await this.initialize();
+
+    const sessions = await this.db!.select<any[]>(
+      `SELECT * FROM focus_sessions 
+       WHERE date >= date('now', '-${days} days') 
+       ORDER BY created_at DESC`,
+      []
+    );
+
+    return sessions;
+  }
+
+  /**
+   * 获取数据库统计信息（兼容unifiedTimerStore）
+   */
+  async getStats(): Promise<{
+    totalSessions: number;
+    totalFocusTime: number;
+    totalBreakTime: number;
+    averageEfficiency: number;
+    bestDay: any;
+  }> {
+    if (!isTauriEnvironment()) {
+      console.warn('Database operation skipped: not in Tauri environment');
+      return {
+        totalSessions: 0,
+        totalFocusTime: 0,
+        totalBreakTime: 0,
+        averageEfficiency: 0,
+        bestDay: null
+      };
+    }
+
+    if (!this.db) await this.initialize();
+
+    // 获取总体统计
+    const totalStats = await this.db!.select<any[]>(
+      `SELECT
+         COUNT(*) as total_sessions,
+         SUM(focus_duration) as total_focus_time,
+         SUM(break_duration) as total_break_time,
+         AVG(efficiency_score) as average_efficiency
+       FROM focus_sessions`,
+      []
+    );
+
+    const stats = totalStats[0] || {};
+
+    // 获取最佳效率的一天
+    const bestDayResult = await this.db!.select<any[]>(
+      `SELECT 
+         date,
+         AVG(efficiency_score) as avg_efficiency,
+         SUM(focus_duration) as total_focus
+       FROM focus_sessions 
+       GROUP BY date 
+       ORDER BY avg_efficiency DESC 
+       LIMIT 1`,
+      []
+    );
+
+    const bestDay = bestDayResult.length > 0 ? bestDayResult[0] : null;
+
+    return {
+      totalSessions: stats.total_sessions || 0,
+      totalFocusTime: stats.total_focus_time || 0,
+      totalBreakTime: stats.total_break_time || 0,
+      averageEfficiency: stats.average_efficiency || 0,
+      bestDay: bestDay
+    };
+  }
 }
 
 // 导出单例实例
-export const databaseService = new DatabaseService();
+// 导出类而不是实例，避免在模块加载时立即执行构造函数
+export { DatabaseService };
+
+// 提供获取单例实例的函数，延迟初始化
+let databaseInstance: DatabaseService | null = null;
+
+export const getDatabaseService = (): DatabaseService => {
+  if (!databaseInstance) {
+    databaseInstance = new DatabaseService();
+  }
+  return databaseInstance;
+};

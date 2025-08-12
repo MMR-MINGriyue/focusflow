@@ -1,6 +1,7 @@
 import { useEffect, useCallback } from 'react';
 import { listen } from '@tauri-apps/api/event';
 import { appWindow } from '@tauri-apps/api/window';
+import { isTauriEnvironment, safeTauriCall } from '../utils/environment';
 
 interface SystemTrayHookOptions {
   onFocusMode?: () => void;
@@ -18,6 +19,10 @@ export const useSystemTray = (options: SystemTrayHookOptions = {}) => {
 
   // 处理托盘菜单事件
   useEffect(() => {
+    if (!isTauriEnvironment()) {
+      return; // 非Tauri环境不监听托盘事件
+    }
+
     const unlistenTimerMode = listen('timer-mode-change', (event) => {
       const mode = event.payload as string;
       
@@ -38,70 +43,109 @@ export const useSystemTray = (options: SystemTrayHookOptions = {}) => {
 
   // 窗口显示/隐藏控制
   const showWindow = useCallback(async () => {
-    try {
-      await appWindow.show();
-      await appWindow.setFocus();
-      onShow?.();
-    } catch (error) {
-      console.error('Failed to show window:', error);
+    if (!isTauriEnvironment()) {
+      return;
     }
+    
+    await safeTauriCall(
+      async () => {
+        await appWindow.show();
+        await appWindow.setFocus();
+        onShow?.();
+      },
+      undefined,
+      { silent: true }
+    );
   }, [onShow]);
 
   const hideWindow = useCallback(async () => {
-    try {
-      await appWindow.hide();
-      onHide?.();
-    } catch (error) {
-      console.error('Failed to hide window:', error);
+    if (!isTauriEnvironment()) {
+      return;
     }
+    
+    await safeTauriCall(
+      async () => {
+        await appWindow.hide();
+        onHide?.();
+      },
+      undefined,
+      { silent: true }
+    );
   }, [onHide]);
 
   const toggleWindow = useCallback(async () => {
-    try {
-      const isVisible = await appWindow.isVisible();
-      if (isVisible) {
-        await hideWindow();
-      } else {
-        await showWindow();
-      }
-    } catch (error) {
-      console.error('Failed to toggle window:', error);
+    if (!isTauriEnvironment()) {
+      return;
     }
+    
+    await safeTauriCall(
+      async () => {
+        const isVisible = await appWindow.isVisible();
+        if (isVisible) {
+          await hideWindow();
+        } else {
+          await showWindow();
+        }
+      },
+      undefined,
+      { silent: true }
+    );
   }, [showWindow, hideWindow]);
 
   // 最小化到托盘
   const minimizeToTray = useCallback(async () => {
-    try {
-      await appWindow.hide();
-    } catch (error) {
-      console.error('Failed to minimize to tray:', error);
+    if (!isTauriEnvironment()) {
+      return;
     }
+    
+    await safeTauriCall(
+      () => appWindow.hide(),
+      undefined,
+      { silent: true }
+    );
   }, []);
 
   // 检查窗口状态
   const getWindowState = useCallback(async () => {
-    try {
-      const [isVisible, isFocused, isMinimized] = await Promise.all([
-        appWindow.isVisible(),
-        appWindow.isFocused(),
-        appWindow.isMinimized()
-      ]);
-
+    if (!isTauriEnvironment()) {
       return {
-        isVisible,
-        isFocused,
-        isMinimized,
-        isInTray: !isVisible
-      };
-    } catch (error) {
-      console.error('Failed to get window state:', error);
-      return {
-        isVisible: false,
-        isFocused: false,
+        isVisible: true,
+        isFocused: true,
         isMinimized: false,
-        isInTray: true
+        isInTray: false
       };
     }
+    
+    const result = await safeTauriCall(
+      async () => {
+        const [isVisible, isFocused, isMinimized] = await Promise.all([
+          appWindow.isVisible(),
+          appWindow.isFocused(),
+          appWindow.isMinimized()
+        ]);
+
+        return {
+          isVisible,
+          isFocused,
+          isMinimized,
+          isInTray: !isVisible
+        };
+      },
+      {
+        isVisible: true,
+        isFocused: true,
+        isMinimized: false,
+        isInTray: false
+      },
+      { silent: true }
+    );
+    
+    return result || {
+      isVisible: true,
+      isFocused: true,
+      isMinimized: false,
+      isInTray: false
+    };
   }, []);
 
   return {

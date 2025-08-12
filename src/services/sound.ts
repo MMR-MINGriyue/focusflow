@@ -64,8 +64,8 @@ class SoundService {
 
     // 创建静默的音频实例，避免错误
     const createSilentHowl = (volume: number = 0.1) => new Howl({
-      src: ['data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIG2m98OScTgwOUarm7blmGgU7k9n1unEiBC13yO/eizEIHWq+8+OWT'],
-      volume: volume,
+      src: ['data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA'],
+        volume: volume,
       onload: () => safeConsole.debug('Silent audio loaded'),
       onloaderror: () => safeConsole.debug('Silent audio fallback'),
       onplayerror: () => safeConsole.debug('Silent audio play (no-op)')
@@ -912,4 +912,14 @@ class SoundService {
   }
 }
 
-export const soundService = new SoundService(); 
+let soundServiceInstance: SoundService | null = null;
+
+export const getSoundService = (): SoundService => {
+  if (!soundServiceInstance) {
+    soundServiceInstance = new SoundService();
+  }
+  return soundServiceInstance;
+};
+
+// 向后兼容
+export const soundService = getSoundService();

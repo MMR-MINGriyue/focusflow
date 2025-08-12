@@ -13,12 +13,13 @@ const path = require('path');
 const colors = {
   reset: '\x1b[0m',
   bright: '\x1b[1m',
+  dim: '\x1b[2m',
   red: '\x1b[31m',
   green: '\x1b[32m',
   yellow: '\x1b[33m',
   blue: '\x1b[34m',
   magenta: '\x1b[35m',
-  cyan: '\x1b[36m'
+  cyan: '\x1b[36m',
 };
 
 function log(message, color = 'reset') {
@@ -101,14 +102,16 @@ function buildFrontend() {
   log('⚠️  跳过代码质量检查 (ESLint配置问题)', 'yellow');
   
   // 构建前端
-  execCommand('npm run build', '构建前端应用');
+  const buildCommand = process.argv.includes('--dev') ? 'npm run build:dev' : 'npm run build:desktop';
+  execCommand(buildCommand, '构建前端应用');
 }
 
 function buildDesktop() {
   log('\n📦 构建桌面应用...', 'yellow');
   
   // 构建 Tauri 应用
-  execCommand('npm run tauri build', '构建桌面应用');
+  const buildCommand = process.argv.includes('--dev') ? 'npm run tauri dev' : 'npm run tauri build';
+  execCommand(buildCommand, '构建桌面应用');
 }
 
 function showBuildInfo() {

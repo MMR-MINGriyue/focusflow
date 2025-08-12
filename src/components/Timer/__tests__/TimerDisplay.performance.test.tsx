@@ -1,11 +1,13 @@
 /**
  * TimerDisplay 组件性能测试
  * 目标：确保渲染时间 < 16ms
+ * 验证样式缓存和memo优化的性能改进
  */
 
 import React from 'react';
 import { render, act } from '@testing-library/react';
 import TimerDisplay from '../TimerDisplay';
+import { styleCache } from '../../../utils/styleCache';
 
 // Mock dependencies
 jest.mock('../../../services/timerStyle', () => ({
@@ -97,6 +99,44 @@ jest.mock('../../../services/timerStyle', () => ({
         opacity: 0.1,
         color: '#f8fafc'
       }
+    })),
+    getStyleForState: jest.fn(() => ({
+      id: 'test-style',
+      name: 'Test Style',
+      displayStyle: 'digital',
+      colors: {
+        primary: '#3b82f6',
+        secondary: '#64748b',
+        background: '#ffffff',
+        text: '#1e293b',
+        accent: '#06b6d4',
+        progress: '#10b981',
+        progressBackground: '#e5e7eb'
+      },
+      layout: {
+        alignment: 'center',
+        spacing: 'normal',
+        showStatusIndicator: true,
+        showProgressPercentage: true,
+        showStateText: true
+      },
+      animations: {
+        enabled: true,
+        transitionDuration: 300,
+        easing: 'ease-in-out',
+        pulseOnStateChange: true,
+        breathingEffect: false,
+        rotationEffect: false
+      },
+      size: 'large',
+      numberStyle: 'standard',
+      progressStyle: 'linear'
+    })),
+    getSettings: jest.fn(() => ({
+      currentStyleId: 'digital-modern',
+      customStyles: [],
+      previewMode: false,
+      autoSwitchByState: false,
     })),
     addListener: jest.fn(),
     removeListener: jest.fn()
@@ -261,5 +301,140 @@ describe('TimerDisplay Performance Tests', () => {
     if (startMemory > 0) {
       expect(memoryIncrease).toBeLessThan(5 * 1024 * 1024); // 5MB
     }
+  });
+
+  // ==================== STYLE CACHE PERFORMANCE TESTS ====================
+  describe('Style Cache Performance', () => {
+    beforeEach(() => {
+      styleCache.invalidate();
+      styleCache.resetStats();
+    });
+
+    it('reduces service calls through caching', () => {
+      // Arrange
+      const props = defaultProps;
+
+      // Act - Multiple renders with same state
+      render(<TimerDisplay {...props} />);
+      render(<TimerDisplay {...props} />);
+      render(<TimerDisplay {...props} />);
+
+      // Assert - Check cache statistics
+      const stats = styleCache.getStats();
+      expect(stats.hits).toBeGreaterThan(0);
+      expect(stats.hitRate).toBeGreaterThan(0);
+    });
+
+    it('provides performance improvement with cache hits', () => {
+      // Arrange
+      const props = defaultProps;
+
+      // Act - First render (potential cache miss)
+      const start1 = performance.now();
+      render(<TimerDisplay {...props} />);
+      const time1 = performance.now() - start1;
+
+      // Act - Second render (cache hit)
+      const start2 = performance.now();
+      render(<TimerDisplay {...props} />);
+      const time2 = performance.now() - start2;
+
+      // Assert - Cache hit should be faster or similar
+      expect(time2).toBeLessThanOrEqual(time1 * 1.5); // Allow some variance
+
+      const stats = styleCache.getStats();
+      expect(stats.totalRequests).toBeGreaterThan(0);
+    });
+
+    it('handles high frequency updates efficiently', () => {
+      // Arrange
+      const baseProps = {
+        currentState: 'focus' as const,
+        isActive: true,
+        stateText: '专注中',
+      };
+
+      // Act - Simulate rapid time updates
+      const start = performance.now();
+      for (let i = 0; i < 50; i++) {
+        const time = 1500 - i;
+        const minutes = Math.floor(time / 60);
+        const seconds = time % 60;
+        const formattedTime = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        const progress = (i / 50) * 100;
+
+        render(<TimerDisplay
+          {...baseProps}
+          time={time}
+          formattedTime={formattedTime}
+          progress={progress}
+        />);
+      }
+      const totalTime = performance.now() - start;
+
+      // Assert
+      expect(totalTime).toBeLessThan(1000); // Should complete within 1 second
+
+      const stats = styleCache.getStats();
+      expect(stats.hitRate).toBeGreaterThan(50); // Reasonable cache hit rate
+    });
+  });
+
+  // ==================== COMPONENT MEMO PERFORMANCE TESTS ====================
+  describe('Component Memo Performance', () => {
+    it('handles rapid prop changes efficiently', () => {
+      // Arrange
+      const props = {
+        currentState: 'focus' as const,
+        isActive: true,
+        stateText: '专注中',
+      };
+
+      // Act - Rapid time updates
+      const start = performance.now();
+      const { rerender } = render(<TimerDisplay
+        {...props}
+        time={1500}
+        formattedTime="25:00"
+        progress={0}
+      />);
+
+      for (let i = 1; i <= 30; i++) {
+        const time = 1500 - i;
+        const minutes = Math.floor(time / 60);
+        const seconds = time % 60;
+        const formattedTime = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        const progress = (i / 30) * 100;
+
+        rerender(<TimerDisplay
+          {...props}
+          time={time}
+          formattedTime={formattedTime}
+          progress={progress}
+        />);
+      }
+      const totalTime = performance.now() - start;
+
+      // Assert
+      expect(totalTime).toBeLessThan(500); // Should complete within 500ms
+    });
+
+    it('maintains performance with different display styles', () => {
+      // Arrange
+      const displayStyles = ['digital', 'analog', 'progress', 'minimal', 'card', 'neon'];
+
+      // Act
+      const start = performance.now();
+      displayStyles.forEach(displayStyle => {
+        render(<TimerDisplay
+          {...defaultProps}
+          // Note: displayStyle is controlled by the style service, not props
+        />);
+      });
+      const totalTime = performance.now() - start;
+
+      // Assert
+      expect(totalTime).toBeLessThan(200); // Should complete within 200ms
+    });
   });
 });

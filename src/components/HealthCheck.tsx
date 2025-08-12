@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AlertCircle, CheckCircle, Database, Volume2, Wifi } from 'lucide-react';
 import { errorHandler } from '../utils/errorHandler';
-import { databaseService } from '../services/database';
+import { getDatabaseService } from '../services/database';
 import { soundService } from '../services/sound';
 import LoadingSpinner from './ui/LoadingSpinner';
 
@@ -34,9 +34,10 @@ const HealthCheck: React.FC<HealthCheckProps> = ({
 
   const checkDatabase = async (): Promise<'healthy' | 'warning' | 'error'> => {
     try {
-      await databaseService.initialize();
-      // 尝试一个简单的查询
-      await databaseService.getDatabaseStats();
+      const databaseService = getDatabaseService();
+    await databaseService.initialize();
+    // 尝试一个简单的查询
+    await databaseService.getDatabaseStats();
       return 'healthy';
     } catch (error) {
       console.error('Database health check failed:', error);

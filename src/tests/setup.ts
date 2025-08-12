@@ -60,6 +60,86 @@ jest.mock('howler', () => ({
 // Mock Radix UI
 jest.mock('@radix-ui/react-slot', () => ({
   Slot: 'div',
+  createSlot: jest.fn(() => ({
+    Slot: 'div',
+    Slottable: 'div'
+  }))
+}));
+
+// Mock other Radix UI components
+jest.mock('@radix-ui/react-primitive', () => ({
+  Primitive: {
+    div: 'div',
+    button: 'button',
+    span: 'span'
+  }
+}));
+
+jest.mock('@radix-ui/react-switch', () => ({
+  Root: 'div',
+  Thumb: 'div'
+}));
+
+jest.mock('@radix-ui/react-slider', () => ({
+  Root: 'div',
+  Track: 'div',
+  Range: 'div',
+  Thumb: 'div'
+}));
+
+jest.mock('@radix-ui/react-progress', () => ({
+  Root: 'div',
+  Indicator: 'div'
+}));
+
+jest.mock('@radix-ui/react-tabs', () => ({
+  Root: 'div',
+  List: 'div',
+  Trigger: 'button',
+  Content: 'div'
+}));
+
+jest.mock('@radix-ui/react-dialog', () => ({
+  Root: 'div',
+  Portal: ({ children }: any) => children,
+  Overlay: 'div',
+  Content: 'div',
+  Title: 'h2',
+  Description: 'p',
+  Close: 'button',
+  Trigger: 'button'
+}));
+
+jest.mock('@radix-ui/react-alert-dialog', () => ({
+  Root: 'div',
+  Portal: ({ children }: any) => children,
+  Overlay: 'div',
+  Content: 'div',
+  Title: 'h2',
+  Description: 'p',
+  Cancel: 'button',
+  Action: 'button',
+  Trigger: 'button'
+}));
+
+jest.mock('@radix-ui/react-dropdown-menu', () => ({
+  Root: 'div',
+  Trigger: 'button',
+  Portal: ({ children }: any) => children,
+  Content: 'div',
+  Item: 'div',
+  Separator: 'div',
+  Label: 'div',
+  Group: 'div'
+}));
+
+jest.mock('@radix-ui/react-tooltip', () => ({
+  Provider: ({ children }: any) => children,
+  Root: 'div',
+  Trigger: 'div',
+  Portal: ({ children }: any) => children,
+  Content: 'div',
+  Arrow: 'div'
 }));
 
 // Mock Web APIs
@@ -117,12 +197,23 @@ Object.defineProperty(global, 'crypto', {
 
 // Mock performance API
 Object.defineProperty(global, 'performance', {
+  writable: true,
+  configurable: true,
   value: {
     now: jest.fn(() => Date.now()),
     mark: jest.fn(),
     measure: jest.fn(),
     getEntriesByType: jest.fn(() => []),
     getEntriesByName: jest.fn(() => []),
+    clearMarks: jest.fn(),
+    clearMeasures: jest.fn(),
+    clearResourceTimings: jest.fn(),
+    getEntries: jest.fn(() => []),
+    setResourceTimingBufferSize: jest.fn(),
+    toJSON: jest.fn(() => ({})),
+    addEventListener: jest.fn(),
+    removeEventListener: jest.fn(),
+    dispatchEvent: jest.fn(),
   },
 });
 
@@ -134,7 +225,81 @@ global.console = {
   log: jest.fn(),
 };
 
+// Mock timer style service - using absolute path from src
+const mockTimerStyleService = {
+  getCurrentStyle: jest.fn(() => ({
+    id: 'digital-modern',
+    name: 'Digital Modern',
+    displayStyle: 'digital',
+    colors: {
+      primary: '#3b82f6',
+      secondary: '#64748b',
+      background: '#ffffff',
+      text: '#1e293b'
+    },
+    layout: {
+      alignment: 'center',
+      spacing: 'normal'
+    },
+    animations: {
+      enabled: true,
+      transitionDuration: 300
+    }
+  })),
+  getStyleForState: jest.fn((state) => ({
+    id: `${state}-style`,
+    name: `${state} Style`,
+    displayStyle: 'digital',
+    colors: {
+      primary: state === 'focus' ? '#22c55e' : state === 'break' ? '#ef4444' : '#f59e0b',
+      secondary: '#64748b',
+      background: '#ffffff',
+      text: '#1e293b'
+    }
+  })),
+  addListener: jest.fn(),
+  removeListener: jest.fn(),
+  setCurrentStyle: jest.fn(),
+  getAllStyles: jest.fn(() => []),
+  getPresetStyles: jest.fn(() => []),
+  getCustomStyles: jest.fn(() => []),
+  addCustomStyle: jest.fn(),
+  updateCustomStyle: jest.fn(),
+  deleteCustomStyle: jest.fn(),
+  exportSettings: jest.fn(() => '{}'),
+  importSettings: jest.fn(() => true),
+  applyStyle: jest.fn()
+};
+
+// Note: timerStyle service mocks are defined in individual test files
+// due to path resolution issues in the global setup
+
+// Setup DOM container for testing (only for React component tests)
+beforeEach(() => {
+  // Only setup DOM for React component tests that need it
+  if (typeof document !== 'undefined' && document.createElement && document.body) {
+    try {
+      // Create a div element to serve as the container for React components
+      const div = document.createElement('div');
+      if (div && typeof div.setAttribute === 'function') {
+        div.setAttribute('id', 'root');
+        document.body.appendChild(div);
+      }
+    } catch (error) {
+      // Silently ignore DOM setup errors for non-React tests
+    }
+  }
+});
+
 // Clean up after each test
 afterEach(() => {
   jest.clearAllMocks();
+  // Clean up DOM (only if document is available)
+  if (typeof document !== 'undefined' && document.body && typeof document.body.innerHTML !== 'undefined') {
+    try {
+      document.body.innerHTML = '';
+    } catch (error) {
+      // Silently ignore cleanup errors
+    }
+  }
 });

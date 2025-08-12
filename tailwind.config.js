@@ -6,6 +6,27 @@ export default {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        'system': ['-apple-system', 'BlinkMacSystemFont', 'SF Pro Display', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
+        'mono': ['SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'source-code-pro', 'Menlo', 'monospace'],
+      },
+      borderRadius: {
+        'mac': '12px',
+        'mac-lg': '16px',
+        'mac-xl': '20px',
+        'mac-2xl': '24px',
+      },
+      boxShadow: {
+        'mac': '0 4px 16px rgba(0, 0, 0, 0.1)',
+        'mac-lg': '0 8px 32px rgba(0, 0, 0, 0.12)',
+        'mac-xl': '0 16px 48px rgba(0, 0, 0, 0.15)',
+        'mac-inner': 'inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+        'mac-focus': '0 0 0 3px rgba(59, 130, 246, 0.3)',
+      },
+      spacing: {
+        '18': '4.5rem',
+        '22': '5.5rem',
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -66,6 +87,10 @@ export default {
         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         'fade-in': 'fadeIn 0.5s ease-in-out',
         'slide-up': 'slideUp 0.3s ease-out',
+        'mac-bounce': 'macBounce 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55)',
+        'mac-scale': 'macScale 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+        'mac-slide-in': 'macSlideIn 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+        'mac-glow': 'macGlow 2s ease-in-out infinite alternate',
       },
       keyframes: {
         fadeIn: {
@@ -76,6 +101,28 @@ export default {
           '0%': { transform: 'translateY(10px)', opacity: '0' },
           '100%': { transform: 'translateY(0)', opacity: '1' },
         },
+        macBounce: {
+          '0%': { transform: 'scale(0.3)', opacity: '0' },
+          '50%': { transform: 'scale(1.05)' },
+          '70%': { transform: 'scale(0.9)' },
+          '100%': { transform: 'scale(1)', opacity: '1' },
+        },
+        macScale: {
+          '0%': { transform: 'scale(1)' },
+          '100%': { transform: 'scale(0.95)' },
+        },
+        macSlideIn: {
+          '0%': { transform: 'translateY(-20px)', opacity: '0' },
+          '100%': { transform: 'translateY(0)', opacity: '1' },
+        },
+        macGlow: {
+          '0%': { boxShadow: '0 0 20px rgba(59, 130, 246, 0.3)' },
+          '100%': { boxShadow: '0 0 40px rgba(59, 130, 246, 0.6)' },
+        },
+      },
+      transitionTimingFunction: {
+        'mac': 'cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+        'mac-spring': 'cubic-bezier(0.68, -0.55, 0.265, 1.55)',
       }
     },
   },

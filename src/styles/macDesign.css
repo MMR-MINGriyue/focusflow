@@ -1,0 +1,418 @@
+/* 现代化Mac风格设计系统 v2.0 - 简化版 */
+
+/* 现代化卡片设计 */
+.modern-card {
+  background: white;
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(229, 231, 235, 0.5);
+  border-radius: 1rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  transition: all 0.5s ease-out;
+}
+
+.dark .modern-card {
+  background: rgba(31, 41, 55, 0.9);
+  border-color: rgba(75, 85, 99, 0.5);
+}
+
+.modern-card:hover {
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  transform: scale(1.02);
+}
+
+/* 现代化按钮系统 */
+.modern-button {
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.75rem;
+  font-weight: 500;
+  transition: all 0.3s ease-out;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.modern-button:hover {
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.modern-button:active {
+  transform: scale(0.95);
+}
+
+.modern-button-primary {
+  background: linear-gradient(to right, #3b82f6, #2563eb);
+  color: white;
+}
+
+.modern-button-primary:hover {
+  background: linear-gradient(to right, #2563eb, #1d4ed8);
+}
+
+.modern-button-secondary {
+  background: linear-gradient(to right, #f3f4f6, #e5e7eb);
+  color: #111827;
+}
+
+.dark .modern-button-secondary {
+  background: linear-gradient(to right, #374151, #4b5563);
+  color: white;
+}
+
+.modern-button-accent {
+  background: linear-gradient(to right, #8b5cf6, #ec4899);
+  color: white;
+}
+
+.modern-button-ghost {
+  background: transparent;
+  color: #374151;
+  border: 2px solid #d1d5db;
+}
+
+.dark .modern-button-ghost {
+  color: #d1d5db;
+  border-color: #4b5563;
+}
+
+/* 现代化计时器样式 */
+.modern-timer {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(147, 51, 234, 0.1));
+}
+
+.modern-timer-focus {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(59, 130, 246, 0.1));
+}
+
+.modern-timer-break {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(245, 158, 11, 0.1));
+}
+
+.modern-timer-micro {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(236, 72, 153, 0.1));
+}
+
+/* 现代化进度条 */
+.modern-progress {
+  position: relative;
+  width: 100%;
+  height: 0.5rem;
+  background: #e5e7eb;
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.dark .modern-progress {
+  background: #374151;
+}
+
+.modern-progress-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899);
+  background-size: 200% 100%;
+  transition: width 0.5s ease-out;
+  animation: shimmer 2s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* 现代化输入框 */
+.modern-input {
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  border: 2px solid #e5e7eb;
+  background: rgba(255, 255, 255, 0.8);
+  color: #111827;
+  transition: all 0.3s ease-out;
+}
+
+.dark .modern-input {
+  background: rgba(31, 41, 55, 0.8);
+  border-color: #4b5563;
+  color: white;
+}
+
+.modern-input:focus {
+  border-color: #3b82f6;
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
+}
+
+/* 现代化标签页 */
+.modern-tabs {
+  display: flex;
+  background: rgba(243, 244, 246, 0.5);
+  border-radius: 1rem;
+  padding: 0.375rem;
+  border: 1px solid rgba(229, 231, 235, 0.5);
+}
+
+.dark .modern-tabs {
+  background: rgba(31, 41, 55, 0.5);
+  border-color: rgba(75, 85, 99, 0.5);
+}
+
+.modern-tab {
+  padding: 0.5rem 1rem;
+  border-radius: 0.75rem;
+  font-weight: 500;
+  font-size: 0.875rem;
+  color: #6b7280;
+  transition: all 0.3s ease-out;
+}
+
+.dark .modern-tab {
+  color: #9ca3af;
+}
+
+.modern-tab:hover {
+  color: #111827;
+}
+
+.dark .modern-tab:hover {
+  color: #d1d5db;
+}
+
+.modern-tab-active {
+  background: white;
+  color: #111827;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.dark .modern-tab-active {
+  background: #374151;
+  color: white;
+}
+
+/* 现代化开关 */
+.modern-switch {
+  position: relative;
+  display: inline-flex;
+  height: 1.75rem;
+  width: 3.5rem;
+  align-items: center;
+  border-radius: 9999px;
+  cursor: pointer;
+  background: #e5e7eb;
+  transition: all 0.3s ease-out;
+}
+
+.dark .modern-switch {
+  background: #374151;
+}
+
+.modern-switch-checked {
+  background: linear-gradient(to right, #3b82f6, #8b5cf6);
+}
+
+.modern-switch-thumb {
+  position: absolute;
+  left: 0.25rem;
+  top: 0.25rem;
+  height: 1.25rem;
+  width: 1.25rem;
+  border-radius: 9999px;
+  background: white;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease-out;
+  transform: translateX(0);
+}
+
+.modern-switch-thumb-checked {
+  transform: translateX(1.75rem);
+}
+
+/* 现代化模态框 */
+.modern-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(12px);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.modern-modal {
+  background: white;
+  border-radius: 1rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  max-width: 28rem;
+  width: 100%;
+  border: 1px solid rgba(229, 231, 235, 0.5);
+  animation: slideUp 0.4s ease-out;
+}
+
+.dark .modern-modal {
+  background: #1f2937;
+  border-color: rgba(75, 85, 99, 0.5);
+}
+
+.modern-modal-header {
+  padding: 1.5rem;
+  border-bottom: 1px solid rgba(229, 231, 235, 0.5);
+}
+
+.dark .modern-modal-header {
+  border-color: rgba(75, 85, 99, 0.5);
+}
+
+.modern-modal-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.dark .modern-modal-title {
+  color: white;
+}
+
+.modern-modal-content {
+  padding: 1.5rem;
+}
+
+.modern-modal-footer {
+  padding: 1.5rem;
+  border-top: 1px solid rgba(229, 231, 235, 0.5);
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.dark .modern-modal-footer {
+  border-color: rgba(75, 85, 99, 0.5);
+}
+
+/* 现代化通知 */
+.modern-notification {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  background: white;
+  border-radius: 1rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(229, 231, 235, 0.5);
+  padding: 1rem;
+  max-width: 24rem;
+  z-index: 50;
+  animation: slideInRight 0.4s ease-out;
+}
+
+.dark .modern-notification {
+  background: #1f2937;
+  border-color: rgba(75, 85, 99, 0.5);
+}
+
+.modern-notification-success {
+  border-left: 4px solid #10b981;
+  background: rgba(16, 185, 129, 0.05);
+}
+
+.modern-notification-error {
+  border-left: 4px solid #ef4444;
+  background: rgba(239, 68, 68, 0.05);
+}
+
+.modern-notification-warning {
+  border-left: 4px solid #f59e0b;
+  background: rgba(245, 158, 11, 0.05);
+}
+
+.modern-notification-info {
+  border-left: 4px solid #3b82f6;
+  background: rgba(59, 130, 246, 0.05);
+}
+
+/* 现代化工具提示 */
+.modern-tooltip {
+  position: absolute;
+  z-index: 50;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 0.5rem;
+  background: rgba(17, 24, 39, 0.9);
+  color: white;
+  backdrop-filter: blur(12px);
+  animation: fadeIn 0.2s ease-out;
+}
+
+.dark .modern-tooltip {
+  background: rgba(55, 65, 81, 0.9);
+}
+
+/* 现代化滚动条 */
+.modern-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
+}
+
+.modern-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.modern-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.modern-scrollbar::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 9999px;
+}
+
+.dark .modern-scrollbar::-webkit-scrollbar-thumb {
+  background: #4b5563;
+}
+
+/* 动画定义 */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .modern-card {
+    border-radius: 1rem;
+  }
+  
+  .modern-button {
+    padding: 0.625rem 1.25rem;
+  }
+  
+  .modern-tabs {
+    flex-direction: column;
+  }
+}

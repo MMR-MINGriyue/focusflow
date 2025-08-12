@@ -15,7 +15,7 @@ interface ThemeToggleProps {
   className?: string;
 }
 
-const ThemeToggle: React.FC<ThemeToggleProps> = ({
+export const ThemeToggle: React.FC<ThemeToggleProps> = ({
   variant = 'button',
   size = 'default',
   className = '',

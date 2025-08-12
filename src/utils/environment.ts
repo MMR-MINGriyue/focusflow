@@ -8,8 +8,8 @@
  */
 export function isTauriEnvironment(): boolean {
   return typeof window !== 'undefined' &&
-         (window as any).__TAURI__ !== undefined &&
-         (window as any).__TAURI_IPC__ !== undefined;
+         '__TAURI__' in window &&
+         '__TAURI_IPC__' in window;
 }
 
 /**

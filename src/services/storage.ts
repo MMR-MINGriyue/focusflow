@@ -120,6 +120,46 @@ class StorageService {
       console.error('Failed to clear stats:', error);
     }
   }
+
+  async get(key: string): Promise<any> {
+    try {
+      await this.ensureDataDir();
+      const fileName = `${key}.json`;
+      const fileExists = await exists(fileName, { dir: BaseDirectory.AppData });
+      if (!fileExists) {
+        return null;
+      }
+
+      const content = await readTextFile(fileName, { dir: BaseDirectory.AppData });
+      return JSON.parse(content);
+    } catch (error) {
+      console.error(`Failed to get ${key}:`, error);
+      return null;
+    }
+  }
+
+  async set(key: string, value: any): Promise<void> {
+    try {
+      await this.ensureDataDir();
+      const fileName = `${key}.json`;
+      await writeTextFile(fileName, JSON.stringify(value, null, 2), {
+        dir: BaseDirectory.AppData
+      });
+    } catch (error) {
+      console.error(`Failed to set ${key}:`, error);
+    }
+  }
 }
 
-export const storageService = new StorageService(); 
+// 导出类而不是实例，避免在模块加载时立即执行构造函数
+export { StorageService };
+
+// 提供获取单例实例的函数，延迟初始化
+let storageInstance: StorageService | null = null;
+
+export const getStorageService = (): StorageService => {
+  if (!storageInstance) {
+    storageInstance = new StorageService();
+  }
+  return storageInstance;
+};

@@ -8,6 +8,9 @@ import {
   Tooltip,
   Legend,
 } from 'recharts';
+import { Link } from 'react-router-dom';
+import { Button } from '../ui/Button';
+import { BarChart3, Zap } from 'lucide-react';
 
 interface StatsProps {
   dailyStats: {
@@ -78,6 +81,15 @@ const Stats: React.FC<StatsProps> = ({ dailyStats }) => {
             {dailyStats.filter(stat => stat.focusTime > 0).length} 天
           </p>
         </div>
+      </div>
+      
+      <div className="mt-6 text-center">
+        <Link to="/stats/enhanced">
+          <Button className="inline-flex items-center">
+            <Zap className="w-4 h-4 mr-2" />
+            查看增强版统计
+          </Button>
+        </Link>
       </div>
     </div>
   );

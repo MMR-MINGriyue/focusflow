@@ -4,7 +4,8 @@
  */
 
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { TimerStyleConfig, TimerStyleSettings } from '../../../types/timerStyle';
 
 // Mock dependencies
@@ -392,12 +393,18 @@ describe('TimerStyleManager Simple Tests', () => {
       const user = userEvent.setup();
       render(<TimerStyleManager />);
 
-      const deleteButton = screen.getByText('删除');
-      await user.click(deleteButton);
+      // Find and click delete button
+      const deleteButtons = screen.getAllByTitle('删除样式');
+      expect(deleteButtons.length).toBeGreaterThan(0);
+      await user.click(deleteButtons[0]);
 
       // Should show confirmation dialog
-      expect(screen.getByText('确认删除样式')).toBeInTheDocument();
-      expect(screen.getByText('确定要删除样式"自定义样式"吗？此操作无法撤销。')).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText('确认操作')).toBeInTheDocument();
+      });
+      
+      // Verify the confirmation message matches the actual implementation
+      expect(screen.getByText('确定要删除样式 "自定义样式" 吗？此操作无法撤销。')).toBeInTheDocument();
     });
   });
 

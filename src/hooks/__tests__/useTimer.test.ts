@@ -31,7 +31,7 @@ const mockTimerStore = {
   getState: jest.fn(),
 };
 
-jest.mock('../../stores/timerStore', () => {
+jest.mock('../../stores/unifiedTimerStore', () => {
   const mockStore = {
     currentState: 'focus',
     timeLeft: 1500,
@@ -77,7 +77,7 @@ Object.defineProperty(window, 'clearInterval', {
 });
 
 describe('useTimer Hook', () => {
-  const mockUseTimerStore = require('../../stores/timerStore').useTimerStore;
+  const mockUseTimerStore = require('../../stores/unifiedTimerStore').useTimerStore;
   let mockTimerStore: any;
 
   beforeEach(() => {
@@ -95,10 +95,10 @@ describe('useTimer Hook', () => {
     
     // Reset interval mocks
     mockSetInterval.mockImplementation((callback, delay) => {
-      return setInterval(callback, delay);
+      return 123; // Return a mock interval ID
     });
     mockClearInterval.mockImplementation((id) => {
-      clearInterval(id);
+      // Just mock the clear operation without calling real clearInterval
     });
   });
 
